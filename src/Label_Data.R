@@ -10,7 +10,6 @@ ethogram$stime <- as.POSIXct(paste("2020-08-30", ethogram$time))
 ethogram$etime <- ethogram$stime + seconds(ethogram$duration.sec)
 
 
-
 Data$label <- NA
 
 for (i in 1:length(ethogram)){
@@ -19,6 +18,7 @@ for (i in 1:length(ethogram)){
                 (Data$level != 1))
   Data$label[inds] <- ethogram$broad.type[i]
 }
+
 # convert to a date time
 rawData$Time <- as.POSIXct(rawData$Time,format='%d-%b-%Y %H:%M:%OS')
 

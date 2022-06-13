@@ -5,35 +5,98 @@ library(runner)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(mclust)
+library(mixreg)
+set.seed(0)
 
 setwd("~/Documents/Research/PHMM/src")
 whale = "I107" # I145
 date0 = "2020-08-25" # "2020-08-30
 
 # start by saying how many states we will have
-N_coarse <- 3
-N_fine <- 3
+N_coarse <- 4
+N_fine <- 2
+N_total <- N_coarse*N_fine
 
 # This script loads in the data, makes a "RawData" df, and adds the important
 # stuff to a data frame called "Data"
 #source("Prep_Data.R")
-Data <- read.csv(paste0('../Dat/diary/processed_Data_',whale,'.csv'),
+Data <- read.csv(paste0('../Dat/diary/',whale,'/processed_Data_',whale,'.csv'),
                  colClasses=c("level"="character"))
 
-# preprare data for HHMM 
+# prepare data for HHMM 
 Data$stime <- as.POSIXct(Data$stime, origin = '1970-01-01')
 Data$etime <- as.POSIXct(Data$etime, origin = '1970-01-01')
-Data$label_num[!is.na(Data$label)] <- N_coarse*N_fine
+Data[is.na(Data$aw1.tm1),"aw1.tm1"] <- 0
+Data[is.na(Data$aw2.tm1),"aw2.tm1"] <- 0
+Data[is.na(Data$aw3.tm1),"aw3.tm1"] <- 0
+
+Data$diveDuration <- log(Data$diveDuration)
+Data$maxDepth <- log(Data$maxDepth)
+Data$label_num <- NA
+
+
+# label the data
+Data$label_num[Data$label == 'crunch'] <- N_coarse*N_fine
 Data$label_num <- as.numeric(Data$label_num)
 Data <- prepData(Data,coordNames=NULL,
                  hierLevels=c("1","2i","2"))
 
 summary(Data)
 
-rawData <- read.csv(paste0('../Dat/diary/processed_rawData_',whale,'.csv'),
+rawData <- read.csv(paste0('../Dat/diary/',whale,'/processed_rawData_',whale,'.csv'),
                     colClasses=c("Time"="double"))
 rawData$Time <- as.POSIXct(rawData$Time, origin = '1970-01-01')
 rawData <- rawData[,!(names(rawData) %in% c("vstate1","vstate2","label"))]
+
+# do some exploratory data analysis
+Data$d_aw1 <- c(0,diff(Data$aw1))
+Data$d_aw2 <- c(0,diff(Data$aw2))
+Data$d_aw3 <- c(0,diff(Data$aw3))
+
+ggplot(Data) +
+  geom_histogram(aes(x=jp,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=rajp,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=hv,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=log(htv),y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=aw1,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=aw2,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=aw3,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=d_aw1,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=d_aw2,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=d_aw3,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
+
+ggplot(Data) +
+  geom_histogram(aes(x=w,y=..density..)) +
+  facet_wrap(~label,ncol=1,scales='free_y')
 
 # get states
 hierStates <- data.tree::Node$new("Orca HHMM states")
@@ -52,13 +115,16 @@ plot(hierStates)
 # get distributions
 hierDist <- data.tree::Node$new("orca HHMM dist")
 hierDist$AddChild("level1")
-hierDist$level1$AddChild("diveDuration", dist="gamma")
-hierDist$level1$AddChild("maxDepth", dist="gamma")
+hierDist$level1$AddChild("diveDuration", dist="norm")
+hierDist$level1$AddChild("maxDepth", dist="norm")
 hierDist$AddChild("level2")
-hierDist$level2$AddChild("hv", dist="norm")
-hierDist$level2$AddChild("jp", dist="norm")
-hierDist$level2$AddChild("rajp", dist="vm")
-#hierDist$level2$AddChild("w", dist="gamma")
+#hierDist$level2$AddChild("hv", dist="norm")
+#hierDist$level2$AddChild("jp", dist="norm")
+#hierDist$level2$AddChild("rajp", dist="vm")
+#hierDist$level2$AddChild("w", dist="norm")
+#hierDist$level2$AddChild("aw1", dist="norm")
+#hierDist$level2$AddChild("aw2", dist="norm")
+#hierDist$level2$AddChild("aw3", dist="norm")
 plot(hierDist)
 
 # get formula using depth as covariate in 
@@ -70,7 +136,7 @@ plot(hierDist)
 # initialize beta (initial ptm)
 hierBeta <- data.tree::Node$new("orca beta")
 hierBeta$AddChild("level1",
-                  beta=matrix(rep(-1.00,N_coarse*(N_coarse-1)),
+                  beta=matrix(rep(0.00,N_coarse*(N_coarse-1)),
                               nrow=1,
                               ncol=N_coarse*(N_coarse-1)))
 hierBeta$AddChild("level2")
@@ -95,17 +161,9 @@ for (n_coarse in 1:N_coarse){
 
 # constrain coarse scale states by making the coarse-scale 
 # parameters the same for all fine-scale states
-N_total <- N_coarse*N_fine
 
 DM <- list()
 userBounds <- list()
-
-A <- diag(2*N_coarse)
-for (row in 1:N_coarse){
-  for (col in row:N_coarse){
-    A[row,col] <- 1
-  }
-}
 
 DM$diveDuration <- matrix(kronecker(diag(2*N_coarse),rep(1,N_fine)),
                           nrow=2*N_total,
@@ -182,95 +240,145 @@ DM$maxDepth <- matrix(kronecker(diag(2*N_coarse),rep(1,N_fine)),
 #                           dimnames=list(rownames(DM$rajp[(N_total+1):(2*N_total),]),
 #                                         c("lower","upper")))
 
-get_par_coarse0 <- function(feature_data){
+# DM$w = list(mean = ~1, sd = ~1)
+
+get_par_coarse0 <- function(feature_data,feature){
+  
+  # do kmeans clustering
+  clust <- kmeans(feature_data,centers = matrix(c(1,3,4.5,3,4,5.5),nrow=3,ncol=2))
+  
+  mus <- rep(NA,N_coarse)
+  sigs <- rep(NA,N_coarse)
+  
+  for (i in 1:N_coarse){
+    mus[i]  <- mean(feature_data[clust$cluster == i,feature])
+    sigs[i] <- log(sd  (feature_data[clust$cluster == i,feature]))
+  }
+  pars <- c(mus,sigs)
+  return(pars)
+}
+
+get_par_fine0 <- function(feature_data,include_corrs=T){
+  
   mus <- quantile(feature_data,
-                  probs = seq(0,1,1/(N_coarse+1)), 
-                  na.rm=T)[2:(N_coarse+1)]
+                  probs = seq(0,1,1/(N_coarse+1)),
+                  na.rm=TRUE)[2:(N_fine+1)]
   
-  sigs <- rep(sd(feature_data,na.rm=TRUE),N_coarse)
+  sigs <- log(rep(sd(feature_data,na.rm=TRUE),N_fine))
   
-  pars <- c(rep(mus,each=N_fine),
-            rep(sigs,each=N_fine))
+  if (include_corrs){
+    mus <- 0.5*mus
+    corrs <- rep(0.5,N_fine)
+    
+    pars <- c()
+    for (i in 1:N_fine){
+      pars <- c(pars,c(mus[i],corrs[i]))
+    }
+    pars <- rep(pars,N_coarse)
+    pars <- c(pars,rep(sigs,times=N_coarse))
+      
+  } else {
+
+    pars <- c(rep(mus,times=N_coarse),
+              rep(sigs,times=N_coarse))    
+  }
   
   return(pars)
 }
 
-ParDiveDuration0 <- get_par_coarse0(Data$diveDuration)
-ParMaxDepth0 <- get_par_coarse0(Data$maxDepth)
+coarse_Data <- Data[Data$level == 1,c("diveDuration","maxDepth")]
+ParDiveDuration0 <- get_par_coarse0(coarse_Data,"diveDuration")
+ParMaxDepth0 <- get_par_coarse0(coarse_Data,"maxDepth")
 
-get_par_fine0 <- function(feature_data){
-  mus <- seq(min(feature_data,na.rm=TRUE),
-             max(feature_data,na.rm=TRUE),
-             length.out = N_fine+2)[1:N_fine+1]
-  
-  sigs <- rep(sd(feature_data,na.rm=TRUE),N_fine)
-  
-  pars <- c(rep(mus,times=N_coarse),
-            rep(sigs,times=N_coarse))
-  
-  return(pars)
-}
+#ParDiveDuration0 <- rep(20,4)
+#ParMaxDepth0  <- rep(20,4)
 
-Parhv0 <- get_par_fine0(Data$hv)
-Parjp0 <- get_par_fine0(Data$jp)
-Parrajp0 <- get_par_fine0(Data$rajp)
+#Parhv0 <- get_par_fine0(Data$hv)
+#Parjp0 <- get_par_fine0(Data$jp)
+#Parrajp0 <- get_par_fine0(Data$rajp)
+Paraw10 = rep(0,3*N_total)
+#Paraw10[seq(1,2*N_total,2)] = sample(Data$aw1[!is.na(Data$aw1)], N_total)
+Paraw10[seq(2,2*N_total,2)] = 1.0
+Paraw10[(2*N_total+1):(3*N_total)] = log(sd(Data$d_aw1,na.rm=TRUE))
+
+Paraw20 = rep(0,3*N_total)
+#Paraw20[seq(1,2*N_total,2)] = sample(Data$aw2[!is.na(Data$aw2)], N_total)
+Paraw20[seq(2,2*N_total,2)] = 1.0
+Paraw20[(2*N_total+1):(3*N_total)] = log(sd(Data$d_aw2,na.rm=TRUE))
+
+Paraw30 = rep(0,3*N_total)
+#Paraw30[seq(1,2*N_total,2)] = sample(Data$aw3[!is.na(Data$aw3)], N_total)
+Paraw30[seq(2,2*N_total,2)] = 1.0
+Paraw30[(2*N_total+1):(3*N_total)] = log(sd(Data$d_aw3,na.rm=TRUE))
+
+Parw0 = c(sample(Data$w[!is.na(Data$w)], N_total),
+          log(rep(sd(Data$w,na.rm=TRUE),N_total)))
 
 # get initial parameters
-Par0 = list(diveDuration = ParDiveDuration0,
-            maxDepth = ParMaxDepth0,
-            hv = Parhv0,
-            jp = Parjp0,
-            rajp = Parrajp0)
+Par = list(diveDuration = rep(ParDiveDuration0,each=1),
+           maxDepth = rep(ParMaxDepth0,each=1))
 
-Par <- getParDM(Data,
-                hierStates=hierStates,
-                hierDist=hierDist,
-                Par=Par0,
-                DM=DM,
-                estAngleMean = list(rajp=TRUE))
+#Par <- getParDM(Data,
+#                hierStates=hierStates,
+#                hierDist=hierDist,
+#                Par=Par,
+#                DM=DM)
+
+# include the other stuff after the fact
+# hierDist$level2$AddChild("aw1", dist="norm")
+# hierDist$level2$AddChild("aw2", dist="norm")
+# hierDist$level2$AddChild("aw3", dist="norm")
+
+# DM$aw1 <- list(mean = ~1 + aw1.tm1, sd = ~1)
+# DM$aw2 <- list(mean = ~1 + aw2.tm1, sd = ~1)
+# DM$aw3 <- list(mean = ~1 + aw3.tm1, sd = ~1)
+
+# Par$aw1 = Paraw10
+# Par$aw2 = Paraw20
+# Par$aw3 = Paraw30
 
 # check hierarchical model specifications
-checkPar0(Data,
+checkPar0(Data[1:1000,],
           hierStates = hierStates,
           hierDist = hierDist,
           hierBeta = hierBeta, 
           hierDelta = hierDelta,
           DM=DM,
-          Par0=Par,
-          estAngleMean = list(rajp=TRUE))
+          Par0=Par)
 
-# fit the HHMM
+# # fit the HHMM
 hhmm <- fitHMM(Data,
                hierStates = hierStates,
                hierDist = hierDist,
-               hierBeta = hierBeta, 
+               hierBeta = hierBeta,
                hierDelta = hierDelta,
                DM=DM,
                Par0=Par,
-               estAngleMean = list(rajp=TRUE))#,
-               #knownStates = Data$label)
-
+               nlmPar = list('print.level'=2))
+hhmm
+saveRDS(hhmm,"hhmm_test.rds")
+hhmm <- readRDS("../params/hhmm_02-25-2022.rds")
 
 labels <- NULL
 labels$level1 <- Data$label[Data$level == 1]
 labels$level2 <- Data$label[Data$level != 1]
 vstates <- viterbi(hhmm, hierarchical = TRUE)
 
-
+# add the dive types and subdive states to the RawData
 dive_types <- data.frame(vstate1 = vstates$level1,
                          label1 = labels$level1,
                          divenum = seq(1,length(vstates$level1)))
-if (!("vstate1" %in% colnames(rawData))){
-  rawData <- left_join(rawData,dive_types,by="divenum")
-}
+
+rawData <- rawData[,!(names(rawData) %in% c("vstate1","label1"))]
+rawData <- left_join(rawData,dive_types,by="divenum")
 
 subdive_states <- data.frame(vstate2 = vstates$level2,
                              label2 = labels$level2,
-                             divesegnum = seq(1,length(vstates$level2)))
+                             segnum = seq(1,length(vstates$level2)))
 rawData$divesegnum = rawData$segnum + rawData$divenum
-if (!("vstate2" %in% colnames(rawData))){
-  rawData <- left_join(rawData,subdive_states,by="divesegnum")
-}
+rawData <- rawData[,!(names(rawData) %in% c("vstate2","label2"))]
+rawData <- left_join(rawData,subdive_states,by="segnum")
+
 rawData$vstate2[rawData$segnum == 0] <- NA
 rawData$label2[rawData$segnum == 0] <- NA
 
@@ -283,31 +391,92 @@ Data$vstate2[Data$level != 1] <- vstates$level2
 Data$vstate1[Data$vstate2 %in% c("S11","S12","S13")] <- "D1"
 Data$vstate1[Data$vstate2 %in% c("S21","S22","S23")] <- "D2"
 Data$vstate1[Data$vstate2 %in% c("S31","S32","S33")] <- "D3"
-
+Data$vstate1[Data$vstate2 %in% c("S41","S42","S43")] <- "D4"
 
 # add elevation
 rawData$Elevation <- -rawData$p
 
 # prepare the data for plotting
-rawDataDownsampled <- rawData[seq(1,nrow(rawData),50),]
+rawDataDownsampled <- rawData[seq(1,nrow(rawData),5),]
 rawDataDownsampled$jp <- log(rawDataDownsampled$jp)
 rawDataDownsampled$hv <- logit(rawDataDownsampled$hv)
+rawDataDownsampled$roll <- rawDataDownsampled$roll*180/pi
+rawDataDownsampled$head <- rawDataDownsampled$head*180/pi
+
+# columns to plot
+
+cols_to_plot = c("Elevation","w","Aw_1","Aw_2","Aw_3")
+
+labs <- c(Elevation = "Depth (m)", 
+          head = "Heading (degrees)",
+          roll = "Roll (degrees)",
+          pitch = "Pitch (degrees)",
+          jp = "Jerk Peak (m/s^3)",
+          htv = "heading total variation",
+          w = "wiggliness",
+          Aw_1 = "x-acc (m/s^2)",
+          Aw_2 = "y-acc (m/s^2)",
+          Aw_3 = "z-acc (m/s^2)")
 
 rawDataDownLong <- rawDataDownsampled %>% 
-  pivot_longer(cols = c("Elevation","jp","rajp","hv","Aw_1","Aw_2","Aw_3"), 
+  pivot_longer(cols = cols_to_plot, 
                names_to = "feature")
 
 # plot the results
-ggplot(rawDataDownLong[rawDataDownLong$divenum %in% 150:200,], 
-       aes(x=Time, y=value, group=divenum)) +
-  geom_line(aes(color=interaction(vstate1,is.na(label1)))) + 
-  facet_wrap(~feature,ncol=1,scales='free_y')
+A <- rawDataDownLong[rawDataDownLong$divenum %in% 110:115,]
+inds = rawDataDownLong[rawDataDownLong$divenum %in% 110:115,] %>% pull("divenum") %>% diff
+inds = which(inds %in% c(1))
+times = A[inds,] %>% pull("Time")
 
-ggplot(rawDataDownLong[(rawDataDownLong$divenum %in% 325:350) &
+times <- Data[Data$label == "crunch","stime"]
+
+# ggplot(rawDataDownLong[rawDataDownLong$divenum %in% 110:115,], 
+#        aes(x=Time, y=value, group=divenum)) +
+#   geom_line(aes(color=vstate1)) + 
+#   geom_vline(xintercept = times) +
+#   facet_wrap(~feature,ncol=1,scales='free_y')
+
+ggplot(rawDataDownLong[(rawDataDownLong$divenum %in% 180:200) &
                        (rawDataDownLong$segnum != 0),], 
-       aes(x=Time, y=value, group=segnum)) +
-  geom_line(aes(color=vstate2),size=1) + 
-  facet_wrap(~feature,ncol=1,scales='free_y')
+       aes(x=Time, y=value)) +
+  geom_line(aes(color=vstate2, group=segnum)) + 
+  geom_vline(xintercept = times) +
+  facet_wrap(~feature,
+             ncol=1,
+             scales='free_y',
+             strip.position = "left",
+             labeller = as_labeller(labs)) +
+  labs(color="Behavioural State",y=NULL) + ggtitle("Shallow Behaviour of Whale I107 on August 25, 2020") +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")
+  
+ggplot(rawDataDownLong[(rawDataDownLong$divenum %in% 180:200) &
+                         (rawDataDownLong$segnum != 0),], 
+       aes(x=Time, y=value)) +
+  geom_line(aes(color=vstate2, group=segnum)) + 
+  geom_vline(xintercept = times) +
+  facet_wrap(~feature,
+             ncol=1,
+             scales='free_y',
+             strip.position = "left",
+             labeller = as_labeller(labs)) +
+  labs(color="Subdive State",y=NULL) + ggtitle("Within Dive Behaviour of Whale I107 on August 25, 2020") +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")
+
+ggplot(rawDataDownLong[(rawDataDownLong$divenum %in% 180:200) &
+                         (rawDataDownLong$segnum != 0),], 
+       aes(x=Time, y=value)) +
+  geom_line(aes(color=vstate1, group=divenum)) + 
+  geom_vline(xintercept = times) +
+  facet_wrap(~feature,
+             ncol=1,
+             scales='free_y',
+             strip.position = "left",
+             labeller = as_labeller(labs)) +
+  labs(color="Dive Type",y=NULL) + ggtitle("Dive Types of Whale I107 on August 25, 2020") +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")
 
 # plot each feature individually
 plot_coarse_feature <- function(feature){
@@ -317,15 +486,19 @@ plot_coarse_feature <- function(feature){
   rate2 = hhmm$mle[[feature]]['mean','S21'] / hhmm$mle[[feature]]['sd','S21']^2
   shape3 = hhmm$mle[[feature]]['mean','S31']^2 / hhmm$mle[[feature]]['sd','S31']^2
   rate3 = hhmm$mle[[feature]]['mean','S31'] / hhmm$mle[[feature]]['sd','S31']^2
+  shape4 = hhmm$mle[[feature]]['mean','S41']^2 / hhmm$mle[[feature]]['sd','S41']^2
+  rate4 = hhmm$mle[[feature]]['mean','S41'] / hhmm$mle[[feature]]['sd','S41']^2
   
   plot <- ggplot(Data,aes_string(x=feature)) +
     geom_histogram(aes(fill=vstate1,y=stat(density)),alpha=0.5,position = "identity") + 
     stat_function(fun = function(x) {dgamma(x,shape=shape1,rate=rate1)},
-                  aes(color = 'D1')) +
+                  aes(color = 'D1'),) +
     stat_function(fun = function(x) {dgamma(x,shape=shape2,rate=rate2)},
                   aes(color = 'D2')) +
     stat_function(fun = function(x) {dgamma(x,shape=shape3,rate=rate3)},
-                  aes(color = 'D3'))
+                  aes(color = 'D3')) +
+    stat_function(fun = function(x) {dgamma(x,shape=shape4,rate=rate4)},
+                  aes(color = 'D4'))
   
   return(plot)
 }
@@ -355,8 +528,10 @@ plot_fine_feature_norm <- function(feature){
   return(plt)
 }
 
-print(plot_fine_feature_norm('hv'))
-print(plot_fine_feature_norm('jp'))
+print(plot_fine_feature_norm('w'))
+print(plot_fine_feature_norm('aw1'))
+print(plot_fine_feature_norm('aw2'))
+print(plot_fine_feature_norm('aw3'))
 
 plot_fine_feature_vm <- function(feature){
 
