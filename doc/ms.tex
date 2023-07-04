@@ -1,0 +1,55 @@
+\documentclass{article}
+\pdfoutput=1
+
+\input{header}
+\input{defs}
+
+\usepackage{appendix}
+
+\title{The Partially Hidden Markov Model: Incorporating Random Labels in Biologging Studies}
+
+\author{
+  Evan Sidrow \\
+  Department of Statistics\\
+  University of British Columbia\\
+  Vancouver, Canada \\
+  \texttt{evan.sidrow@stat.ubc.ca} \\
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:intro_ss}
+\input sections/intro.tex
+
+\section{Modelling the Probability of Hidden State Observation}
+\label{sec:prob_obs_ss}
+\input sections/prob_obs.tex
+
+\section{Weighted Likelihood for Sparse Labels}
+\label{sec:w_like_ss}
+\input sections/w_like.tex
+
+\section{Further Work}
+\label{sec:fut_ss}
+\input sections/future_work.tex
+
+\section*{ACKNOWLEDGEMENTS}
+The killer whale data were collected under University of British Columbia Animal Care Permit number A19-0053 and Fisheries and Oceans Canada Marine Mammal Scientific License for Whale Research number XMMS 6 2019.
+This research was enabled in part by support provided by WestGrid (www.westgrid.ca) and Compute Canada (www.computecanada.ca).
+I acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC) as well as the support of Fisheries and Oceans Canada (DFO). 
+I thank the University of British Columbia and the Four-Year Doctoral Fellowship program.
+%
+\newpage
+\bibliography{references}
+%
+
+\begin{appendix}
+
+\input sections/appendix.tex
+
+\end{appendix}
+
+\end{document}
