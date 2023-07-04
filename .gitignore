@@ -1,2 +1,7 @@
 plots/
 dat/
+params/
+ref/
+src/archive/
+*.ipynb
+*.RData*

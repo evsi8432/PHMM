@@ -1,0 +1,61 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2580
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;\red2\green2\blue2;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\cssrgb\c784\c784\c784;\cssrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww17400\viewh18220\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+-Robbins-Monroe Gradient Descent\
+\
+1) We want to do half marginalize out, half DON\'92T for X_t\
+	- For the estimates of the hidden states, we can either estimate X_t or we can estimate delta_t or we can have the known values of X_t\
+\
+- for Frequentest MLE:\
+	- we can use stochastic gradient descent while keeping X_t or delta_t fixed,\
+	- update X_t and delta_t using either a global update (more principled) or just pretend it is a mixture model (faster)\
+\
+- for Bayesian MCMC:\
+	- All we can really use do likelihood evaluation in parallel. I can\'92t think of any other way that this will help\'85\
+	- OR we can use the method described in Foti et al (2017)- just build on it. (Stochastic Gradient MCMC)\
+\
+\
+\
+2) what features should we use for the above?\
+\
+- Shapelet transform looks promising!\
+\
+- Should we just use a shapelet transform followed by a mixture model or HMM (semi-supervised), or something else?\
+\
+\
+\
+3) What about hierarchical / parallel tempering?\
+\
+- for state switching:\
+\
+	- pi_0 = p(gamma | delta_t = delta_t_0 * 2^N)\
+	- pi_1 = p(gamma | delta_t = delta_t_0)\
+	- The gamma is still at the finest scale, but gamma is repeatedly squared to get to pi_0\
+\
+- For SDEs, known X:\
+\
+	- pi_0 = p(theta|X_1,\'85,X_\{T\})\
+	- pi_1 = p(theta|X_1,\'85,X_\{T*2^N\}\}\
+\
+- For SDEs, unknown X:\
+\
+	- pi_0 = p(theta,X_1,\'85,X_\{T\})\
+	- pi_1 = p(theta,X_1,\'85,X_\{T*2^N\})\
+\
+- QUESTIONS: \
+\
+	- Is the posterior even multi-modal? Do research here (I think it is!)\
+\
+	- pi_0 needs to have high variance in addition to being easy to sample from. Do we have this? \
+	- easy to test using a simulation!\
+\
+	- Here is the problem: if we get more prior domination via picking less data, then we are just losing information and adding variance to our estimate. We might as well use traditional parallel tempering in HMMs to get the posterior, and then we are looking at the paper 
+\f1\b \'93\cf2 \cb3 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Toward Efficient Bayesian Approaches to Inference in Hierarchical Hidden Markov Models for Inferring Animal Behavior\'94
+\fs80 \
+}
