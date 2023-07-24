@@ -18,7 +18,7 @@ library(scales)
 library(gridExtra)
 
 # define parameters
-sex <- "Male"
+sex <- "Female"
 date <- "2023-04-03"
 holdout_whale <- "None"
 nseeds <- 1
@@ -171,7 +171,7 @@ Data$maxDepth[Data$ID == "D21"] <- Data$maxDepth[Data$ID == "D21"] + 0.5
 plot0 <- ggplot(Data,aes_string(x="maxDepth")) +
   annotate(geom = "rect", 
            xmin = 0, 
-           xmax = 7.5, 
+           xmax = 5, 
            ymin = -Inf, 
            ymax = Inf,
            fill = group.colors.fine[1], 
@@ -311,6 +311,18 @@ dive_types <- data.frame(vstate1 = vstates,
                          divenum = Data$divenum,
                          knownState = Data$knownState)
 
+# Plot Data
+ggplot(Data,
+       aes(x=log(diveDuration), 
+           y=log(maxDepth),
+           color=vstate1_fine)) +
+  geom_point() +
+  stat_density_2d(color="white") + 
+  geom_hline(yintercept = log(md_threshs)) +
+  geom_vline(xintercept = log(dd_threshs)) +
+  scale_color_viridis_c() +
+  facet_wrap(~vstate1_coarse,ncol = 1)
+
 # load in the rawData
 rawData <- data.frame(fread('../../dat/Final_rawData_Beth.csv'))
 rawData <- rawData[,!(names(rawData) %in% c("vstate1","label1"))]
@@ -421,6 +433,26 @@ for (whale in c("D21")){#unique(Data$ID)){
          device='png', 
          dpi=500)
 }
+
+ggplot(Data,aes(x=log(maxDepth), 
+                y=log(diveDuration), 
+                color=factor(vstate1_coarse),
+                shape=factor(vstate1_fine))) +
+  geom_point() +
+  scale_color_manual(labels=group.names.coarse,
+                     values=group.colors.coarse) +
+  scale_shape_manual(labels=group.names.fine,
+                     values = 1:4)
+
+ggplot(Data,
+       aes(x=log(maxDepth), 
+           y=log(diveDuration), 
+           color=factor(vstate1_fine))) +
+  geom_bin2d() + 
+  scale_color_manual(labels=group.names.fine,
+                     values=group.colors.fine) + 
+  scale_fill_viridis() + 
+  facet_wrap(~vstate1_coarse,ncol = 1)
 
 # plots of features
 
