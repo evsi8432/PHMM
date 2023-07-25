@@ -18,7 +18,7 @@ library(scales)
 library(gridExtra)
 
 # define parameters
-sex <- "Female"
+sex <- "Male"
 date <- "2023-04-03"
 holdout_whale <- "None"
 nseeds <- 1
@@ -151,7 +151,7 @@ rownames(Data) <- 1:nrow(Data)
 ### add sex to Data ###
 Data$Sex <- "Female"
 Data[Data0$ID %in% c("I107","D21","L87","L88"),"Sex"]  <- "Male"
-Data$Sex <- factor(Data$Sex)
+Data$Sex <- factor(Data$Sex,levels=c("Male","Female"))
 Data <- prepData(Data,
                  coordNames=NULL,
                  hierLevels = c("1", "2i", "2"))
@@ -168,10 +168,11 @@ group.colors.fine <- c("1" = "#007094",
 ### plot histogram of depths by sex ###
 Data$maxDepth[Data$ID == "D21"] <- Data$maxDepth[Data$ID == "D21"] + 0.5
 
-plot0 <- ggplot(Data,aes_string(x="maxDepth")) +
+plot0 <- ggplot(Data,
+                aes_string(x="maxDepth")) +
   annotate(geom = "rect", 
            xmin = 0, 
-           xmax = 5, 
+           xmax = 7.5, 
            ymin = -Inf, 
            ymax = Inf,
            fill = group.colors.fine[1], 
@@ -190,7 +191,7 @@ plot0 <- ggplot(Data,aes_string(x="maxDepth")) +
            ymax = Inf,
            fill = group.colors.fine[3], 
            alpha = 0.5) +
-  geom_histogram(position="identity",binwidth = 0.05)+#bins=100) + 
+  geom_histogram(position="identity",binwidth = 0.05) + 
   facet_wrap(~Sex,
              ncol=1,
              strip.position = "top") +
@@ -198,33 +199,26 @@ plot0 <- ggplot(Data,aes_string(x="maxDepth")) +
   scale_x_log10(breaks = c(seq(0.5,0.9,0.1),seq(1,9,1),seq(10,90,10),seq(100,400,100)),
                 labels = c(rep("",5),1,rep("",8),10,rep("",8),100,rep("",3))) +
   scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
-  #annotation_logticks(sides = "b") +
   theme_classic() + 
   theme(strip.background = element_blank(),
         strip.text.x = element_blank(),
-        text = element_text(size=16)) +
-  geom_rect(data = data.frame(maxDepth = 0, y = 0), aes(xmin=30,xmax=40,ymin=-Inf,ymax=Inf,fill="Shallow"),alpha=0.005) +
-  geom_rect(data = data.frame(maxDepth = 0, y = 0), aes(xmin=40,xmax=50,ymin=-Inf,ymax=Inf,fill="Medium"),alpha=0.005) +
-  geom_rect(data = data.frame(maxDepth = 0, y = 0), aes(xmin=50,xmax=60,ymin=-Inf,ymax=Inf,fill="Deep"),alpha=0.005) +
-  scale_fill_manual('Dive labels',
-                    values = c("#007094","#00BE7D","#FDE333"), 
-                    breaks = c("Shallow","Medium","Deep"),
-                    guide = guide_legend(override.aes = list(alpha = 0.2))) +
+        text = element_text(size=12, family="Arial")) +
   geom_text(data = data.frame(Sex = c("Female","Male"),
                               x = c(0.5,0.5),
-                              y = c(400,400),
-                              label = c("A) Females","B) Males")),
+                              y = c(425,425),
+                              label = c("Females","Males")),
             aes(x=x,y=y,label=label),
-            size = 6, hjust=0, vjust=1, fontface = "bold")
+            size = 4, hjust=0, vjust=1, fontface = "bold")
 
 print(plot0)
 
-ggsave(paste0("../plots/",date,"/hist_maxDepth.png"),
+ggsave(paste0("../plots/",date,"/hist_maxDepth.tiff"),
        plot = plot0,
-       width = 8,
-       height = 4,
-       device='png', 
-       dpi=500)
+       width = 5,
+       height = 3,
+       units = 'in',
+       device = 'tiff', 
+       dpi=600)
 
 # Do some small EDA
 if (sex == "Male"){
@@ -311,18 +305,6 @@ dive_types <- data.frame(vstate1 = vstates,
                          divenum = Data$divenum,
                          knownState = Data$knownState)
 
-# Plot Data
-ggplot(Data,
-       aes(x=log(diveDuration), 
-           y=log(maxDepth),
-           color=vstate1_fine)) +
-  geom_point() +
-  stat_density_2d(color="white") + 
-  geom_hline(yintercept = log(md_threshs)) +
-  geom_vline(xintercept = log(dd_threshs)) +
-  scale_color_viridis_c() +
-  facet_wrap(~vstate1_coarse,ncol = 1)
-
 # load in the rawData
 rawData <- data.frame(fread('../../dat/Final_rawData_Beth.csv'))
 rawData <- rawData[,!(names(rawData) %in% c("vstate1","label1"))]
@@ -379,80 +361,65 @@ for (whale in c("D21")){#unique(Data$ID)){
   
   plot1 <- ggplot(df,aes(x=Time, y=value)) +
     geom_line(aes(color=factor(vstate1_fine),
-                  group=divenum)) + 
+                  group=divenum),
+              linewidth = 0.25) + 
     geom_hline(yintercept = 0) + 
-    scale_color_manual(labels=group.names.fine,
+    scale_color_manual(labels=rep(NULL,4),
                        values=group.colors.fine) +
-    labs(color="",
+    labs(color=NULL,
          y="Dive depth (m)",
-         x="") + 
+         x=NULL) + 
     scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
     scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    annotate(geom = "text", 
-             label = "A) Dive type",
-             x = min(df$Time) + 0.05*(max(df$Time) - min(df$Time)),
-             y = -50,
-             size = 6, hjust=0, vjust=1, fontface = "bold") +
     theme_classic() + 
     theme(strip.background = element_blank(),
           strip.placement = "outside",
-          legend.position = c(.1,.3),
-          legend.justification = "left",
-          text = element_text(size=16)) + 
-    guides(colour = guide_legend(override.aes = list(linewidth=3)))
+          text = element_text(size=12,family = "Arial"),
+          legend.key.height = unit(4,"mm"),
+          legend.key.width = unit(4,"mm"),
+          legend.position=c(.2,.45),
+          legend.justification = c(1,1),
+          axis.title.y = element_text(vjust = 2.5),
+          axis.text.x=element_blank(),
+          plot.margin=unit(c(5.5,5.5,2.25,5.5), "points")) + 
+    guides(colour = guide_legend(override.aes = list(linewidth=2)))
   
   plot2 <- ggplot(df,aes(x=Time, y=value)) +
     geom_line(aes(color=factor(vstate1_coarse),
-                  group=divenum)) + 
+                  group=divenum),
+              linewidth = 0.25) + 
     geom_hline(yintercept = 0) + 
-    scale_color_manual(labels=group.names.coarse,
+    scale_color_manual(labels=rep(NULL,3),
                        values=group.colors.coarse) +
-    labs(color="",
+    labs(color=NULL,
          y="Dive depth (m)",
          x="Elapsed time (hours)") + 
     scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
     scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    annotate(geom = "text", 
-             label = "B) Behavioural state",
-             x = min(df$Time) + 0.05*(max(df$Time) - min(df$Time)),
-             y = -50,
-             size = 6, hjust=0, vjust=1, fontface = "bold") +
     theme_classic() + 
     theme(strip.background = element_blank(),
           strip.placement = "outside",
-          legend.position=c(.1,.3),
-          legend.justification = "left",
-          text = element_text(size=16)) + 
-    guides(colour = guide_legend(override.aes = list(linewidth=3)))
+          text = element_text(size=12,family = "Arial"),
+          legend.key.height = unit(4,"mm"),
+          legend.key.width = unit(4,"mm"),
+          legend.position=c(.2,.45),
+          legend.justification = c(1,1),
+          axis.title.y = element_text(vjust = 2.5),
+          axis.title.x = element_text(vjust = -0.4),
+          plot.margin = unit(c(2.25,5.5,5.5,5.5), "points")) + 
+    guides(colour = guide_legend(override.aes = list(linewidth=2)))
+  
+  print(plot1)
+  #print(plot2)
   
   g <- arrangeGrob(plot1, plot2)
-  ggsave(paste0("../plots/",date,"/profile_",whale,"_all.png"),
+  ggsave(paste0("../plots/",date,"/profile_",whale,"_all.tiff"),
          plot = g,
-         width = 8,
-         height = 8,
-         device='png', 
-         dpi=500)
+         width = 5,
+         height = 5,
+         device='tiff', 
+         dpi=600)
 }
-
-ggplot(Data,aes(x=log(maxDepth), 
-                y=log(diveDuration), 
-                color=factor(vstate1_coarse),
-                shape=factor(vstate1_fine))) +
-  geom_point() +
-  scale_color_manual(labels=group.names.coarse,
-                     values=group.colors.coarse) +
-  scale_shape_manual(labels=group.names.fine,
-                     values = 1:4)
-
-ggplot(Data,
-       aes(x=log(maxDepth), 
-           y=log(diveDuration), 
-           color=factor(vstate1_fine))) +
-  geom_bin2d() + 
-  scale_color_manual(labels=group.names.fine,
-                     values=group.colors.fine) + 
-  scale_fill_viridis() + 
-  facet_wrap(~vstate1_coarse,ncol = 1)
 
 # plots of features
 
@@ -484,11 +451,11 @@ for(feature in c("maxDepth","diveDuration","postDiveInt")){
   #print(plot0)
   
   ggsave(paste0("../plots/",date,"/hist_hier_",
-                feature,"_",sex,".png"),
+                feature,"_",sex,".tiff"),
          plot = plot0,
-         width = 16,
-         height = 4,
-         device='png', 
+         width = 5,
+         height = 1.25,
+         device='tiff', 
          dpi=500)
 }
 
