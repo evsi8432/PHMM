@@ -297,6 +297,34 @@ for (whale in whales){
   print(max(c(0,all_rawData$divenum),na.rm=T))
 }
 
+# add sex to Data
+Data$Sex <- "Female"
+Data[Data$ID %in% c("I107","D21","L87","L88"),"Sex"]  <- "Male"
+Data$Sex <- factor(Data$Sex)
+
+# adjust/add columns
+Data$postDiveInt <- exp(Data$postDiveInt) + runif(nrow(Data))/2
+Data$maxDepth <- exp(Data$maxDepth)
+Data$maxDepth[Data$ID == "D21"] <- Data$maxDepth[Data$ID == "D21"] + 0.5
+Data$diveDuration <- exp(Data$diveDuration) + runif(nrow(Data))/2
+Data$logMaxDepth <- log(Data$maxDepth)
+Data$logDiveDuration <- log(Data$diveDuration)
+Data$logWLow <- log(Data$avg_w_low)
+Data$logWHigh <- log(Data$avg_w_high)
+Data$logWTotal <- log(Data$avg_w_low + Data$avg_w_high)
+Data$logMDDD.x <- Data$logMaxDepth
+Data$logMDDD.y <- Data$logDiveDuration
+Data$logW.x <- Data$logWLow
+Data$logW.y <- Data$logWHigh
+
+# add labels
+Data$knownState <- NA
+Data$knownState[Data$diveType %in% "Resting"] <- 1
+Data$knownState[Data$diveType %in% "Travelling"] <- 2
+Data$knownState[Data$diveType %in% "Foraging"] <- 3
+Data$knownState[is.na(Data$knownState)] <- 4
+Data$knownState <- as.factor(Data$knownState)
+
 # save results
 write.csv(all_Data, row.names=F, file=paste0('../../dat/Final_Data_Beth.csv'))
 write.csv(all_rawData, row.names=F, file=paste0('../../dat/Final_rawData_Beth.csv'))
