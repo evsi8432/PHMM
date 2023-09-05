@@ -3,6 +3,7 @@ plt/
 dat/
 params/
 ref/
+archive/
 src/archive/
 *.ipynb
 *.RData*
