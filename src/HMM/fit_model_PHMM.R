@@ -4,9 +4,16 @@ library(mclust)
 library(data.table)
 library(RcppHungarian)
 
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
+
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
+
+opt_file <- args[1]
+args <- as.integer(args[2])
+
+# get options
+source(paste0('../opt/',opt_file))
 
 # define way to make titles
 make_title <- function(start,end){
@@ -26,14 +33,21 @@ make_title <- function(start,end){
   return(title)
 }
 
-# load in options
-load("options.RData")
-
 # do the hierarchical thing
 if(hier){
-  source("../HHMM/fit_model_PHHMM_share_fine.R")
+  source("../HHMM/fit_model_PHHMM.R")
   quit()
 }
+
+sind <- 0
+
+if(is.na(args)){
+  args_list <- sind:(60*n_retries-1)
+} else {
+  args_list <- c(args)
+}
+
+for(args in args_list){
 
 # Set Seed
 rand_seed <- (args[1] %% n_retries) + 1
@@ -54,13 +68,18 @@ print(rand_seed)
 print(holdout_whale)
 print(model)
 
-# create directories
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
+# check if we already have a model
+file <- make_title(paste0(directory,"/params/"),
+                   paste0(model,"-",
+                          holdout_whale,"-",
+                          rand_seed,"-",
+                          "hmm.rds"))
+if(file.exists(file)){
+  next
+}
 
 # get data
-source("load_data.R")
+source("../HMM/load_data.R")
 
 # get rid of held out whale
 Data <- Data[!(Data$ID %in% holdout_whale),]
@@ -144,15 +163,21 @@ if (model %in% c("fixed_1")){
 }
 
 for(feature in features1){
-  if(dist[feature] == "mvnorm2"){
+  if(dist[[feature]] == "mvnorm2"){
     DM0 <- diag(5*N)
     for(i in 1:N){
       DM0[3*N+i,2*N+i] <- 0.5
       DM0[3*N+i,4*N+i] <- 0.5
     }
     DM[[feature]] <- DM0
-  } else if(dist[feature] == "norm"){
-    DM[[feature]] <-  list(mean = ~1, sd = ~1)
+  } else if (dist[[feature]] == "norm"){
+    DM[[feature]] <- list(mean = ~1, sd = ~1)
+  } else if (substring(dist[[feature]], 1,3) == "cat"){
+    ncats <- as.integer(substring(dist[[feature]], 4))
+    DM[[feature]] <- list()
+    for(i in 1:(ncats-1)){
+      DM[[feature]][[paste0("prob",i)]] = ~1
+    }
   }
 }
 
@@ -172,8 +197,11 @@ Par0 <- list()
 for(feature in features1){
   if(dist[[feature]] == "norm"){
     Par0[[feature]] <- matrix(rep(NA,2*N), nrow = N)
-  } else if(dist[[feature]] == "mvnorm2"){
+  } else if (dist[[feature]] == "mvnorm2"){
     Par0[[feature]] <- matrix(rep(NA,5*N), nrow = N)
+  } else if (substring(dist[[feature]], 1,3) == "cat") {
+    ncats <- as.integer(substring(dist[[feature]], 4))
+    Par0[[feature]] <- matrix(rep(NA,(ncats-1)*N), nrow = N)
   } else {
     print("feature distribtuion not recognized")
   }
@@ -184,15 +212,23 @@ if(model == "no"){
     for(feature in features1){
       if(dist[[feature]] == "norm"){
         Par0[[feature]][i,1] <- mean(Data[,feature]) + rnorm(1)*sd(Data[,feature]) # mean
-        Par0[[feature]][i,2] <- exp(0.5*rnorm(1))/N * sd(Data[,feature])
+        Par0[[feature]][i,2] <- exp(0.5*rnorm(1))/N * sd(Data[,feature])           # sd
       } else if (dist[[feature]] == "mvnorm2") {
         featurex <- paste0(feature,".x")
         featurey <- paste0(feature,".y")
         Par0[[feature]][i,1] <- mean(Data[,featurex]) + rnorm(1)*sd(Data[,featurex]) # mean
         Par0[[feature]][i,2] <- mean(Data[,featurey]) + rnorm(1)*sd(Data[,featurey]) # mean
-        Par0[[feature]][i,3] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurex])) # sd x
-        Par0[[feature]][i,4] <- 0.0
-        Par0[[feature]][i,5] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurey])) # sd y
+        Par0[[feature]][i,3] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurex]))     # sd x
+        Par0[[feature]][i,4] <- 0.0                                                  # cov xy
+        Par0[[feature]][i,5] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurey]))     # sd y
+      } else if (substring(dist[[feature]], 1,3) == "cat") {
+        ncats <- as.integer(substring(dist[[feature]], 4))
+        for(j in 1:(ncats-1)){
+          Par0[[feature]][i,j] <- mean(Data[,feature] == j , na.rm=T)
+        }
+        noise <- rexp(ncats)
+        noise <- noise / sum(noise)
+        Par0[[feature]][i,] = 0.9*Par0[[feature]][i,] + 0.1*head(noise,-1)
       }
     }
   }
@@ -225,7 +261,7 @@ if(model %in% "no"){
 # prep data
 Data0 <- prepData(Data,coordNames=NULL)
 
-print(nrow(Data0))
+eps <- 1e-8
 
 # fit HMM
 hmm <- fitHMM(data=Data0,
@@ -233,12 +269,12 @@ hmm <- fitHMM(data=Data0,
               dist=dist,
               DM=DM,
               beta0=beta0,
-              delta0=delta0,
+              delta0=(1-eps)*delta0 + eps*rep(1/N,N),
               Par0=Par0,
               fixPar=fixPar,
               userBounds=userBounds,
               workBounds=workBounds,
-              nlmPar = list('print.level'=2,
+              nlmPar = list('steptol'=1e-4,
                             'iterlim'=1000))
 
 print(hmm)
@@ -277,16 +313,19 @@ for (i in 1:3){
   old_behaviour_pairs <- pairs[behaviour_inds,2]
   mus <- c()
   for (j in old_behaviour_pairs) {
-    if(dist[feature] == "mvnorm2"){
+    if (dist[[feature]] == "mvnorm2"){
       mus <- c(mus,hmm$mle[[feature]]["mean.x",j])
-    }
-    if(dist[feature] == "norm"){
+    } else if (dist[[feature]] == "norm"){
       mus <- c(mus,hmm$mle[[feature]]["mean",j])
+    } else if (substring(dist[[feature]], 1,3) == "cat"){
+      mus <- c(mus,hmm$mle[[feature]]["prob1",j])
     }
   }
   new_pairs[behaviour_inds,2] <- old_behaviour_pairs[order(mus)]
 }
 hmm$pairs <- new_pairs
+
+print(hmm$pairs)
 
 # Save hmm
 saveRDS(hmm,
@@ -295,3 +334,5 @@ saveRDS(hmm,
                           holdout_whale,"-",
                           rand_seed,"-",
                           "hmm.rds")))
+
+}

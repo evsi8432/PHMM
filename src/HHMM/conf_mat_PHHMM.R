@@ -5,12 +5,41 @@ library(data.table)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src")
 
-# get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
 
-# load in options
-load("options.RData")
+opt_file <- args[1]
+args <- as.integer(args[2])
+
+# get options
+source(paste0('../opt/',opt_file))
+
+# define way to make titles
+make_title <- function(start,end){
+  title <- paste0(start,statesPerBehaviour[1])
+  for(nstates in statesPerBehaviour[2:3]){
+    title <- paste0(title,"-",nstates)
+  }
+  for(feature in features1){
+    title <- paste0(title,"-",feature)
+  }
+  if(length(sex) > 1){
+    title <- paste0(title,"_all")
+  } else {
+    title <- paste0(title,"_",sex)
+  }
+  title <- paste0(title,"_",end)
+  return(title)
+}
+
+sind <- 0
+
+if(is.na(args)){
+  args_list <- sind:54
+} else {
+  args_list <- c(args)
+}
+
+for(args in args_list){
 
 # set seed
 set.seed(1)
@@ -25,15 +54,13 @@ whale_ind <- floor(args[1] / 5) + 1
 whales <- c("A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
 holdout_whale <- whales[whale_ind]
 
-# make directories
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
+print(model)
+print(holdout_whale)
 
 ### BEGIN COMPUTATION ###
 
 # get data
-source("load_data.R")
+source("../HMM/load_data.R")
 
 ### change to hierarchical ###
 Data0 <- NULL
@@ -80,8 +107,12 @@ for(ID in unique(Data$ID)){
       Data0 <- rbind(Data0,tmp1,tmp2) 
     }
     
-    # move the current time 
-    time <- tail(tmp2,n=1)[1,"etime"]
+    # move the current time
+    if(nrow(tmp2) > 0){
+      time <- tail(tmp2,n=1)[1,"etime"]
+    } else {
+      time <- time + span*60
+    }
   }
 }
 Data <- Data0
@@ -96,28 +127,9 @@ Data_unlabeled <- prepData(Data_unlabeled,
                            coordNames=NULL,
                            hierLevels=c("1","2i","2"))
 
-# load in hmm
-make_title <- function(start,end){
-  title <- paste0(start,statesPerBehaviour[1])
-  for(nstates in statesPerBehaviour[2:3]){
-    title <- paste0(title,"-",nstates)
-  }
-  for(feature in features1){
-    title <- paste0(title,"-",feature)
-  }
-  if(length(sex) > 1){
-    title <- paste0(title,"_all")
-  } else {
-    title <- paste0(title,"_",sex)
-  }
-  title <- paste0(title,"_",end)
-  return(title)
-}
-
 # load in best hmm
-files <- Sys.glob(paste0(directory,"/params/*",
-                         model,"-",holdout_whale,
-                         "*-hmm.rds"))
+files <- Sys.glob(make_title(paste0(directory,"/params/"),
+                             paste0(model,"-",holdout_whale,"-*-hmm.rds")))
 
 best_hmm <- NULL
 best_nll <- Inf
@@ -199,25 +211,9 @@ rownames(conf_matrix) <- c("True Resting", "True Travelling", "True Foraging")
 colnames(conf_matrix) <- c("Predicted Resting", "Predicted Travelling", "Predicted Foraging")
 
 # Save hmm
-make_title <- function(start,end){
-  title <- paste0(start,statesPerBehaviour[1])
-  for(nstates in statesPerBehaviour[2:3]){
-    title <- paste0(title,"-",nstates)
-  }
-  for(feature in features1){
-    title <- paste0(title,"-",feature)
-  }
-  if(length(sex) > 1){
-    title <- paste0(title,"_all")
-  } else {
-    title <- paste0(title,"_",sex)
-  }
-  title <- paste0(title,"_",end)
-  return(title)
-}
-
 write.csv(conf_matrix,
           make_title(paste0(directory,"/params/"),
                      paste0(model,"-",
                             holdout_whale,"-",
                             "confusion_matrix.csv")))
+}

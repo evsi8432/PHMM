@@ -3,12 +3,16 @@ library(dplyr)
 library(mclust)
 library(data.table)
 
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
+
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
 
-# load in options
-load("options.RData")
+opt_file <- args[1]
+args <- as.integer(args[2])
+
+# get options
+source(paste0('../opt/',opt_file))
 
 # do the hierarchical thing
 if(hier){
@@ -18,6 +22,15 @@ if(hier){
 
 # set seed
 set.seed(1)
+
+sind <- 0
+if(is.na(args)){
+  args_list <- sind:54
+} else {
+  args_list <- c(args)
+}
+
+for(args in args_list){
 
 # Select Model
 model_ind <- (args[1] %% 5) + 1
@@ -29,14 +42,12 @@ whale_ind <- floor(args[1] / 5) + 1
 whales <- c("A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
 holdout_whale <- whales[whale_ind]
 
-# make directories
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
+print(model)
+print(holdout_whale)
 
 ### BEGIN COMPUTATION ###
 
-source("load_data.R")
+source("../HMM/load_data.R")
 
 # get (un)labelled Data for held out whale
 Data_labeled <- Data[Data$ID %in% holdout_whale,]
@@ -64,9 +75,8 @@ make_title <- function(start,end){
 }
 
 # load in best hmm
-files <- Sys.glob(paste0(directory,"/params/*",
-                         model,"-",holdout_whale,
-                         "*-hmm.rds"))
+files <- Sys.glob(make_title(paste0(directory,"/params/"),
+                             paste0(model,"-",holdout_whale,"-*-hmm.rds")))
 
 best_hmm <- NULL
 best_nll <- Inf
@@ -93,8 +103,7 @@ if(model == "no"){
                  Par0=Par0$Par,
                  userBounds=userBounds,
                  workBounds=workBounds,
-                 nlmPar = list('print.level'=2,
-                               'stepmax'=1e-100,
+                 nlmPar = list('stepmax'=1e-100,
                                'iterlim'=1))
 } else {
   hmm0 <- fitHMM(data=Data_unlabeled,
@@ -107,8 +116,7 @@ if(model == "no"){
                Par0=Par0$Par,
                userBounds=userBounds,
                workBounds=workBounds,
-               nlmPar = list('print.level'=2,
-                             'stepmax'=1e-100,
+               nlmPar = list('stepmax'=1e-100,
                              'iterlim'=1))
 }
 # add pairs to hmm0
@@ -170,3 +178,5 @@ write.csv(conf_matrix,
                      paste0(model,"-",
                             holdout_whale,"-",
                             "confusion_matrix.csv")))
+
+}

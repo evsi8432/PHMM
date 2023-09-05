@@ -6,29 +6,19 @@ library(data.table)
 library(ggplot2)
 library(GGally)
 
-#setwd("/Users/evsi8432/Documents/Research/PHMM/src")
-
-# get command-line arguments
-args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
-
-# load in options
-load("options.RData")
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # set seed
 set.seed(1)
 
-# Select Model
-model_ind <- args[1] + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
-model <- models[model_ind]
+# get command-line arguments
+args <- commandArgs(trailingOnly=TRUE)
 
-# select holdout whale
-holdout_whale <- "none"
+opt_file <- args[1]
+args <- as.integer(args[2])
 
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
+# get options
+source(paste0('../opt/',opt_file))
 
 # define way to make titles
 make_title <- function(start,end){
@@ -48,30 +38,51 @@ make_title <- function(start,end){
   return(title)
 }
 
-# load in options
-load("options.RData")
+sind <- 0
+if(is.na(args)){
+  args_list <- sind:59
+} else {
+  args_list <- c(args)
+}
+
+# only load in data once
+source("../HMM/load_data.R")
+DataBackup <- Data
+
+# load in the rawData
+rawData <- data.frame(fread('../../../dat/Final_rawDataDown_Beth.csv'))
+
+# add columns
+rawData$Elevation <- -rawData$p
+rawData$log_w_low <- log10(rawData$w_low)
+rawData$log_w_high <- log10(rawData$w_high)
+rawData$log_w_total <- log10(rawData$w_low + rawData$w_high)
+
+rawDataBackup <- rawData
+
+for(args in args_list){
+  
+# Select Model
+model_ind <- (args[1] %% 5) + 1
+models <- c("no","fixed_1","fixed_2","half_random","random")
+model <- models[model_ind]
+
+# select holdout whale
+whale_ind <- floor(args[1] / 5) + 1
+whales <- c("none","A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
+holdout_whale <- whales[whale_ind]
+
+print(model)
+print(holdout_whale)
+
 N0 <- statesPerBehaviour[1]
 
 # set seed
 set.seed(1)
 
-# Select Model
-model_ind <- args[1] + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
-model <- models[model_ind]
-
-# select holdout whale
-holdout_whale <- "none"
-
-# create directories
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
-
 # load in best hmm
-files <- Sys.glob(paste0(directory,"/params/*",
-                         model,"-",holdout_whale,
-                         "*-hmm.rds"))
+files <- Sys.glob(make_title(paste0(directory,"/params/"),
+                             paste0(model,"-",holdout_whale,"-*-hmm.rds")))
 
 best_hmm <- NULL
 best_nll <- Inf
@@ -85,7 +96,7 @@ for(file in files){
 hmm <- best_hmm
 
 # get data
-source("load_data.R")
+Data <- DataBackup
 
 if(holdout_whale == "none"){
   whales = unique(Data$ID)
@@ -143,7 +154,11 @@ for(ID in unique(Data$ID)){
     }
 
     # move the current time
-    time <- tail(tmp2,n=1)[1,"etime"]
+    if(nrow(tmp2) > 0){
+      time <- tail(tmp2,n=1)[1,"etime"]
+    } else {
+      time <- time + span*60
+    }
   }
 }
 Data <- Data0
@@ -226,79 +241,77 @@ labs <- c(Elevation = "Depth (meters)",
           log_w_total = "Wiggliness (Total) (log10)",
           postDiveInt = "Post Dive Interval (s)")
 
-# plot scatterplots
-plot0 <- ggplot(Data,
-                aes(x=diveDuration,
-                    y=maxDepth,
-                    color=as.factor(knownState))) +
-  geom_point() +
-  scale_color_manual(labels = group.names1,
-                     values = group.colors1) +
-  stat_density_2d(color="white") +
-  scale_x_log10() + scale_y_log10() +
-  labs(color="Labelled Behaviour",
-       y="Dive Depth (m)",
-       x="Dive Duration (s)") +
-  facet_wrap(~vstates,
-             ncol = 2,
-             labeller = as_labeller(group.names2))
-
-ggsave(make_title(paste0(directory,"/plt/"),
-                  paste0(model,"_scatterplot-mddd.png")),
-       plot = plot0,
-       width = 8,
-       height = 8,
-       device='png',
-       dpi=500)
-
-plot1 <- ggplot(Data,
-                aes(x=avg_w_low,
-                    y=avg_w_high,
-                    color=as.factor(knownState))) +
-  geom_point() +
-  scale_color_manual(labels = group.names1,
-                     values = group.colors1) +
-  stat_density_2d(color="white") +
-  scale_x_log10() + scale_y_log10() +
-  labs(color="Labelled Behaviour",
-       x="W low",
-       y="W high") +
-  facet_wrap(~vstates,ncol = 2, labeller = as_labeller(group.names2))
-
-ggsave(make_title(paste0(directory,"/plt/"),
-                  paste0(model,"_scatterplot-w.png")),
-       plot = plot1,
-       width = 8,
-       height = 8,
-       device='png',
-       dpi=500)
-
-plot2 <- ggpairs(Data[,c(features2,"vstates")],
-                 aes(colour = vstates, alpha = 0.4)) +
-  scale_color_manual(labels = group.names2,
-                     values = group.colors2)
-
-ggsave(make_title(paste0(directory,"/plt/"),
-                  paste0(model,"_ggpairs.png")),
-       plot = plot2,
-       width = 8,
-       height = 8,
-       device='png',
-       dpi=500)
+if(holdout_whale == "none"){
+  
+  # plot scatterplots
+  plot0 <- ggplot(Data,
+                  aes(x=diveDuration,
+                      y=maxDepth,
+                      color=as.factor(knownState))) +
+    geom_point() +
+    scale_color_manual(labels = group.names1,
+                       values = group.colors1) +
+    stat_density_2d(color="white") +
+    scale_x_log10() + scale_y_log10() +
+    labs(color="Labelled Behaviour",
+         y="Dive Depth (m)",
+         x="Dive Duration (s)") +
+    facet_wrap(~vstates,
+               ncol = 2,
+               labeller = as_labeller(group.names2))
+  
+  ggsave(make_title(paste0(directory,"/plt/"),
+                    paste0(model,"_scatterplot-mddd.png")),
+         plot = plot0,
+         width = 8,
+         height = 8,
+         device='png',
+         dpi=500)
+  
+  plot1 <- ggplot(Data,
+                  aes(x=avg_w_low,
+                      y=avg_w_high,
+                      color=as.factor(knownState))) +
+    geom_point() +
+    scale_color_manual(labels = group.names1,
+                       values = group.colors1) +
+    stat_density_2d(color="white") +
+    scale_x_log10() + scale_y_log10() +
+    labs(color="Labelled Behaviour",
+         x="W low",
+         y="W high") +
+    facet_wrap(~vstates,ncol = 2, labeller = as_labeller(group.names2))
+  
+  ggsave(make_title(paste0(directory,"/plt/"),
+                    paste0(model,"_scatterplot-w.png")),
+         plot = plot1,
+         width = 8,
+         height = 8,
+         device='png',
+         dpi=500)
+  
+  plot2 <- ggpairs(Data[,c(features2,"vstates")],
+                   aes(colour = vstates, alpha = 0.4)) +
+    scale_color_manual(labels = group.names2,
+                       values = group.colors2)
+  
+  ggsave(make_title(paste0(directory,"/plt/"),
+                    paste0(model,"_ggpairs.png")),
+         plot = plot2,
+         width = 8,
+         height = 8,
+         device='png',
+         dpi=500)
+}
 
 # load in the rawData
-rawData <- data.frame(fread('../../dat/Final_rawDataDown_Beth.csv'))
-
-# add columns
-rawData$Elevation <- -rawData$p
-rawData$log_w_low <- log10(rawData$w_low)
-rawData$log_w_high <- log10(rawData$w_high)
-rawData$log_w_total <- log10(rawData$w_low + rawData$w_high)
+rawData <- rawDataBackup
 
 # add the dive types to the RawData
 dive_types <- data.frame(vstate1    = Data$vstates,
                          knownState = Data$knownState,
                          divenum    = Data$divenum)
+
 rawData <- left_join(rawData,dive_types,by="divenum")
 
 cols_to_plot <- c("Elevation","log_w_total")
@@ -341,4 +354,5 @@ for (whale in whales){
          height = 8,
          device='png',
          dpi=500)
+}
 }

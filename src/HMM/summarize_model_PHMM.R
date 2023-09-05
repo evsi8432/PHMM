@@ -4,12 +4,16 @@ library(mclust)
 library(data.table)
 library(ggplot2)
 
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
+
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
 
-# load in options
-load("options.RData")
+opt_file <- args[1]
+args <- as.integer(args[2])
+
+# get options
+source(paste0('../opt/',opt_file))
 
 # Set Seed
 set.seed(1)

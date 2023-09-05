@@ -4,7 +4,7 @@ library(mclust)
 library(data.table)
 
 # load data
-Data <- data.frame(fread('../../dat/Final_Data_Beth.csv'))
+Data <- data.frame(fread('../../../dat/Final_Data_Beth.csv'))
 
 # assign labels of dives to dive before
 Data$pseudolabel <- FALSE
@@ -25,7 +25,19 @@ for(i in 1:nrow(Data)){
 }
 
 Data$label <- (2*Data$knownState - 1) + Data$pseudolabel
-Data$label <- as.factor(Data$label)
+Data$label <- factor(Data$label, levels = 1:7)
+
+# get values for D21 (max Depth is off for some reason)
+D21_data <- read.csv("../../../dat/dive_summaries/D21_diveMove_summary_0.5m.csv")
+Data$maxDepth[Data$ID %in% "D21"] <- D21_data$max.dive.depth.m
+Data$logMaxDepth[Data$ID %in% "D21"] <- log(D21_data$max.dive.depth.m)
+Data$logMDDD.x[Data$ID %in% "D21"] <- log(D21_data$max.dive.depth.m)
+
+# Assign categorical variables
+Data$maxDepthCat <- 1
+for(thresh in md_threshs){
+  Data$maxDepthCat[Data$maxDepth > thresh] <- Data$maxDepthCat[Data$maxDepth > thresh] + 1
+}
 
 # only keep a subset of the entire data set
 Data <- Data[Data$Sex %in% sex,]

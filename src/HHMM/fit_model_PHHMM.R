@@ -4,14 +4,22 @@ library(mclust)
 library(data.table)
 library(RcppHungarian)
 
-#setwd("/Users/evsi8432/Documents/Research/PHMM/src")
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
-# get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
-args <- as.integer(args)
 
-opt_file <- "hier_logMDDD_2-2-2_dd-02_2023-08-30.R"
-args <- 0
+opt_file <- args[1]
+args <- as.integer(args[2])
+
+# get options
+source(paste0('../opt/',opt_file))
+
+# find N for working scale
+if(share_fine){
+  N_working <- N0
+} else {
+  N_working <- N
+}
 
 # define way to make titles
 make_title <- function(start,end){
@@ -31,9 +39,15 @@ make_title <- function(start,end){
   return(title)
 }
 
-# load in options
-source(paste0('../opt/',opt_file))
-N0 <- statesPerBehaviour[1]
+sind <- 0
+
+if(is.na(args)){
+  args_list <- sind:(60*n_retries-1)
+} else {
+  args_list <- c(args)
+}
+
+for(args in args_list){
 
 # Set Seed
 rand_seed <- (args[1] %% n_retries) + 1
@@ -54,10 +68,15 @@ print(rand_seed)
 print(holdout_whale)
 print(model)
 
-# create directories
-dir.create(directory, showWarnings = FALSE)
-dir.create(paste0(directory,"/params"), showWarnings = FALSE)
-dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
+# check if we already have a model
+file <- make_title(paste0(directory,"/params/"),
+                   paste0(model,"-",
+                          holdout_whale,"-",
+                          rand_seed,"-",
+                          "hmm.rds"))
+if(file.exists(file)){
+  next
+}
 
 # get data
 source("../HMM/load_data.R")
@@ -222,19 +241,32 @@ if (model %in% c("fixed_1")){
 
 for(feature in features1){
   if(dist[feature] == "mvnorm2"){
-    DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1, 0,0,0, 0,0,0, 0,0,0,       0,0,0),diag(N0)), # mean x
-                                  kronecker(c(0,0,0, 1,1,1, 0,0,0, 0,0,0,       0,0,0),diag(N0)), # mean y
-                                  kronecker(c(0,0,0, 0,0,0, 1,1,1, 0.5,0.5,0.5, 0,0,0),diag(N0)), # sig x
-                                  kronecker(c(0,0,0, 0,0,0, 0,0,0, 1,1,1,       0,0,0),diag(N0)), # sig xy
-                                  kronecker(c(0,0,0, 0,0,0, 0,0,0, 0.5,0.5,0.5, 1,1,1),diag(N0))), # sig y
-                            nrow=N*5,ncol=N0*5)
+    if(share_fine){
+      DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1, 0,0,0, 0,0,0, 0,0,0,       0,0,0),diag(N0)), # mean x
+                                    kronecker(c(0,0,0, 1,1,1, 0,0,0, 0,0,0,       0,0,0),diag(N0)), # mean y
+                                    kronecker(c(0,0,0, 0,0,0, 1,1,1, 0.5,0.5,0.5, 0,0,0),diag(N0)), # sig x
+                                    kronecker(c(0,0,0, 0,0,0, 0,0,0, 1,1,1,       0,0,0),diag(N0)), # sig xy
+                                    kronecker(c(0,0,0, 0,0,0, 0,0,0, 0.5,0.5,0.5, 1,1,1),diag(N0))), # sig y
+                              nrow=N*5,ncol=N0*5) 
+    } else {
+      DM[[feature]] <- matrix(cbind(kronecker(c(1, 0, 0, 0,   0),diag(N)), # mean x
+                                    kronecker(c(0, 1, 0, 0,   0),diag(N)), # mean y
+                                    kronecker(c(0, 0, 1, 0.5, 0),diag(N)), # sig x
+                                    kronecker(c(0, 0, 0, 1,   0),diag(N)), # sig xy
+                                    kronecker(c(0, 0, 0, 0.5, 1),diag(N))), # sig y
+                              nrow=N*5,ncol=N*5)       
+    }
   } else if(dist[feature] == "norm"){
-    DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1,0,0,0),diag(N0)),
-                                  kronecker(c(0,0,0,1,1,1),diag(N0))),
-                            nrow=N*2,ncol=N0*2)
+    DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1,0,0,0),diag(N_working)),
+                                  kronecker(c(0,0,0,1,1,1),diag(N_working))),
+                            nrow=N*2,ncol=N_working*2)
   } else if (substring(dist[[feature]], 1,3) == "cat"){
     ncats <- as.integer(substring(dist[[feature]], 4))
-    DM[[feature]] <- kronecker(kronecker(diag(ncats-1),c(1,1,1)),diag(N0))
+    if(share_fine){
+      DM[[feature]] <- kronecker(kronecker(diag(ncats-1),c(1,1,1)),diag(N0))
+    } else {
+      DM[[feature]] <- matrix(diag(N*(ncats-1)))
+    }
   }
 }
 
@@ -253,19 +285,19 @@ Par0 <- list()
 
 for(feature in features1){
   if(dist[[feature]] == "norm"){
-    Par0[[feature]] <- matrix(rep(NA,2*N0), nrow = N0)
+    Par0[[feature]] <- matrix(rep(NA,2*N_working), nrow = N_working)
   } else if(dist[[feature]] == "mvnorm2"){
-    Par0[[feature]] <- matrix(rep(NA,5*N0), nrow = N0)
+    Par0[[feature]] <- matrix(rep(NA,5*N_working), nrow = N_working)
   } else if (substring(dist[[feature]], 1,3) == "cat") {
     ncats <- as.integer(substring(dist[[feature]], 4))
-    Par0[[feature]] <- matrix(rep(NA,(ncats-1)*N0), nrow = N0)
+    Par0[[feature]] <- matrix(rep(NA,(ncats-1)*N_working), nrow = N_working)
   } else {
     print("feature distribtuion not recognized")
   }
 }
 
 if(model == "no"){
-  for(i in 1:N0){
+  for(i in 1:N_working){
     for(feature in features1){
       if(dist[[feature]] == "norm"){
         Par0[[feature]][i,1] <- mean(Data[,feature],na.rm=T) + rnorm(1)*sd(Data[,feature],na.rm=T) # mean
@@ -307,20 +339,11 @@ if(model == "no"){
                     beta=matrix(rnorm(3*(3-1),mean=-2,sd=1),nrow=1))
 
   hierBeta$AddChild(name="level2")
-  hierBeta$level2$AddChild(name="rest",beta=matrix(rnorm(N0*(N0-1),mean=-2,sd=1),nrow=1))
-  hierBeta$level2$AddChild(name="trav",beta=matrix(rnorm(N0*(N0-1),mean=-2,sd=1),nrow=1))
-  hierBeta$level2$AddChild(name="forg",beta=matrix(rnorm(N0*(N0-1),mean=-2,sd=1),nrow=1))
+  hierBeta$level2$AddChild(name="rest",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
+  hierBeta$level2$AddChild(name="trav",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
+  hierBeta$level2$AddChild(name="forg",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
 } else {
   hierBeta <- getPar0(old_hmm)$hierBeta
-  #coarse_betas <- unique(old_hmm$mle$beta[1,])[-1]
-  #hierBeta$AddChild(name="level1",beta=matrix(coarse_betas,1))
-
-  #hierBeta$AddChild(name="level2")
-  #fine_betas <- unique(old_hmm$mle$beta[3,])[-N0]
-  #nbetas <- N0*(N0-1)
-  #hierBeta$level2$AddChild(name="rest",beta=matrix(fine_betas[1:nbetas],1))
-  #hierBeta$level2$AddChild(name="trav",beta=matrix(fine_betas[(nbetas+1):(2*nbetas)],1))
-  #hierBeta$level2$AddChild(name="forg",beta=matrix(fine_betas[(2*nbetas+1):(3*nbetas)],1))
 }
 
 ### get initial TPMs from previous fits ###
@@ -343,33 +366,35 @@ for(feature in features1){
     userBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,0.01,0.01,0.01),each=N),
                                       rep(c(Inf,Inf,Inf,Inf,Inf),each=N)),
                                     nrow=5*N,ncol=2)
-    workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,-Inf,-Inf,-Inf),each=N0),
-                                      rep(c(Inf,Inf,Inf,-0.01,Inf),each=N0)),
-                                    nrow=5*N0,ncol=2)
+    workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,-Inf,-Inf,-Inf),each=N_working),
+                                      rep(c(Inf,Inf,Inf,-0.01,Inf),each=N_working)),
+                                    nrow=5*N_working,ncol=2)
   } else if (dist[feature] == "norm"){
     userBounds[[feature]] <- matrix(c(rep(c(-Inf,0.01),each=N),
                                       rep(c(Inf,Inf),each=N)),
                                     nrow=2*N,ncol=2)
-    workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf),each=N0),
-                                      rep(c(Inf,Inf),each=N0)),
-                                    nrow=2*N0,ncol=2)
+    workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf),each=N_working),
+                                      rep(c(Inf,Inf),each=N_working)),
+                                    nrow=2*N_working,ncol=2)
   } else if (substring(dist[[feature]], 1,3) == "cat") {
     ncats <- as.integer(substring(dist[[feature]], 4))
     
     userBounds[[feature]] <- matrix(c(rep(0.00,(ncats-1)*N),
                                       rep(1.00,each=(ncats-1)*N)),
                                     nrow=(ncats-1)*N,ncol=2)
-    workBounds[[feature]] <- matrix(c(rep(-Inf,each=(ncats-1)*N0),
-                                      rep(Inf,each=(ncats-1)*N0)),
-                                    nrow=2*N0,ncol=2)
+    workBounds[[feature]] <- matrix(c(rep(-Inf,each=(ncats-1)*N_working),
+                                      rep(Inf,each=(ncats-1)*N_working)),
+                                    nrow=2*N_working,ncol=2)
   }
 }
 
+
 # prep data
-Data[Data$level != 2,features2] <- NA
 Data <- prepData(Data,
                  coordNames=NULL,
                  hierLevels = c("1", "2i", "2"))
+
+Data[Data$level != 2,features2] <- NA
 
 ### Check Parameters ###
 checkPar0(data=Data,
@@ -384,16 +409,16 @@ checkPar0(data=Data,
           DM=DM)
 
 hmm <- fitHMM(data=Data,
-              hierStates=hierStates,
-              hierDist=hierDist,
-              hierBeta=hierBeta,
-              hierDelta=hierDelta,
-              Par0=Par0,
-              fixPar=fixPar,
-              userBounds=userBounds,
-              workBounds=workBounds,
-              DM=DM,
-              nlmPar = list('iterlim'=1000))
+               hierStates=hierStates,
+               hierDist=hierDist,
+               hierBeta=hierBeta,
+               hierDelta=hierDelta,
+               Par0=Par0,
+               fixPar=fixPar,
+               userBounds=userBounds,
+               workBounds=workBounds,
+               DM=DM,
+               nlmPar = list('iterlim'=1000))
 
 print(hmm)
 
@@ -402,7 +427,9 @@ Data <- cbind(Data,stateProbs(hmm))
 
 accs <- matrix(nrow = 3, ncol = 3)
 behaviours <- c("resting","travelling","foraging")
-states <- c(paste("rest",1:N0),paste("trav",1:N0),paste("forg",1:N0))
+states <- c(paste("rest",1:statesPerBehaviour[1]),
+            paste("trav",1:statesPerBehaviour[2]),
+            paste("forg",1:statesPerBehaviour[3]))
 
 # make accuracy matrix
 for(i in 1:3){
@@ -436,3 +463,4 @@ saveRDS(hmm,
                           holdout_whale,"-",
                           rand_seed,"-",
                           "hmm.rds")))
+}
