@@ -2,8 +2,9 @@ library(momentuHMM)
 library(dplyr)
 library(mclust)
 library(data.table)
+library(RcppHungarian)
 
-#setwd("/Users/evsi8432/Documents/Research/PHMM/src")
+#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 args <- commandArgs(trailingOnly=TRUE)
 
@@ -34,7 +35,7 @@ make_title <- function(start,end){
 sind <- 0
 
 if(is.na(args)){
-  args_list <- sind:54
+  args_list <- sind:(19*5-1)
 } else {
   args_list <- c(args)
 }
@@ -51,7 +52,10 @@ model <- models[model_ind]
 
 # select holdout whale
 whale_ind <- floor(args[1] / 5) + 1
-whales <- c("A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
+whales <- c("A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 holdout_whale <- whales[whale_ind]
 
 print(model)
@@ -61,63 +65,6 @@ print(holdout_whale)
 
 # get data
 source("../HMM/load_data.R")
-
-### change to hierarchical ###
-Data0 <- NULL
-for(ID in unique(Data$ID)){
-  
-  boutnum <- 1
-  whale_data <- Data[Data$ID %in% ID,]
-  start <- whale_data$stime[1]
-  end <- whale_data$etime[nrow(whale_data)]
-  time <- start
-  
-  while(time < end){
-    
-    # add levels 1 and 2i
-    tmp1 <- as.data.frame(matrix(nrow=2,ncol=ncol(Data)+1))
-    colnames(tmp1) <- c("boutnum",colnames(Data))
-    tmp1$ID <- ID
-    tmp1$level <- c("1","2i")
-    
-    # add level 2
-    tmp2 <- whale_data[(whale_data$stime >= time) & (whale_data$stime < (time + span*60)),]
-    
-    rest <- any(c(1) %in% tmp2$knownState)
-    trav <- any(c(2) %in% tmp2$knownState)
-    forg <- any(c(3) %in% tmp2$knownState)
-    
-    # check for repeated knownState
-    if(forg){
-      tmp2$knownState <- 3
-    }
-    else if (rest + trav > 1){
-      tmp2$knownState <- 4
-    }
-    
-    if(nrow(tmp2) > 0){
-      
-      # combine it all together
-      tmp2$level <- "2"
-      
-      tmp1$boutnum <- boutnum
-      tmp2$boutnum <- boutnum
-      boutnum <- boutnum + 1
-      
-      Data0 <- rbind(Data0,tmp1,tmp2) 
-    }
-    
-    # move the current time
-    if(nrow(tmp2) > 0){
-      time <- tail(tmp2,n=1)[1,"etime"]
-    } else {
-      time <- time + span*60
-    }
-  }
-}
-Data <- Data0
-rownames(Data) <- 1:nrow(Data)
-Data$label <- factor(Data$label,levels = 1:7)
 
 # get (un)labelled Data for held out whale
 Data_labeled <- Data[Data$ID %in% holdout_whale,]
@@ -138,7 +85,6 @@ for(file in files){
   if(hmm$mod$minimum < best_nll){
     best_hmm <- hmm
     best_nll <- hmm$mod$minimum
-    print(file)
   }
 }
 hmm <- best_hmm
@@ -158,7 +104,7 @@ for(feature in names(dist)){
   fixPar[[feature]] <- hmm$conditions$fixPar[[feature]]
 }
 
-# prep data
+# fit new HMM
 hmm0 <- fitHMM(data=Data_unlabeled,
                hierStates=hmm$conditions$hierStates,
                hierDist=hmm$conditions$hierDist,
@@ -172,19 +118,10 @@ hmm0 <- fitHMM(data=Data_unlabeled,
                nlmPar = list('stepmax'=1e-100,
                              'iterlim'=1))
 
-hmm0$pairs <- hmm$pairs
-
 # decode states
 probs <- stateProbs(hmm0)
-inds <- cumsum(statesPerBehaviour)
-
-rest_inds <- hmm0$pairs[1:inds[1],2]
 Data_labeled$prob_resting <- rowSums(probs[,rest_inds,drop=FALSE])
-
-trav_inds <- hmm0$pairs[(inds[1]+1):inds[2],2]
 Data_labeled$prob_travelling <- rowSums(probs[,trav_inds,drop=FALSE])
-
-forg_inds <- hmm0$pairs[(inds[2]+1):inds[3],2]
 Data_labeled$prob_foraging <- rowSums(probs[,forg_inds,drop=FALSE])
 
 # just get held-out whale

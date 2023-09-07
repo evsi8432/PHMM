@@ -6,15 +6,8 @@ module load proj/9.0.1
 module load gdal/3.5.1
 module load udunits/2.2.28
 
-
-
-# fit models with no labels
-out0=$(sbatch fit_model_PHMM_no.sh $1 --output=/dev/null)
-sar0=($out0)
-jid0=(${sar0[3]})
-
-# fit all other models (use no labels as a seed)
-out1=$(sbatch --dependency=afterany:$jid0 fit_model_PHMM.sh $1 --output=/dev/null)
+# fit models
+out1=$(sbatch fit_model_PHMM.sh $1 --output=/dev/null)
 sar1=($out1)
 jid1=(${sar1[3]})
 

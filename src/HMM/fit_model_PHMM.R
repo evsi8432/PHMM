@@ -3,11 +3,14 @@ library(dplyr)
 library(mclust)
 library(data.table)
 library(RcppHungarian)
+library(mvtnorm)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # get command-line arguments
-args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE) 
+#args <- c("logMDDD-logWTotal_1-1-1_dd-30_2023-08-30.R",NA)
+#args <- c("logMDDD_1-1-1_dd-30_2023-09-06.R",21)
 
 opt_file <- args[1]
 args <- as.integer(args[2])
@@ -42,7 +45,7 @@ if(hier){
 sind <- 0
 
 if(is.na(args)){
-  args_list <- sind:(60*n_retries-1)
+  args_list <- sind:(100*n_retries-1)
 } else {
   args_list <- c(args)
 }
@@ -54,13 +57,15 @@ rand_seed <- (args[1] %% n_retries) + 1
 set.seed(rand_seed)
 
 # select holdout whale
-whale_ind <- (floor(args[1] / n_retries) %% 12) + 1
-whales <- c("none","A100","A113","D21","D26",
-            "I107","I129","I145","L87","L88","R48","R58")
+whale_ind <- (floor(args[1] / n_retries) %% 20) + 1
+whales <- c("none","A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 holdout_whale <- whales[whale_ind]
 
 # Select Model
-model_ind <- floor(args[1] / (12*n_retries)) + 1
+model_ind <- floor(args[1] / (20*n_retries)) + 1
 models <- c("no","fixed_1","fixed_2","half_random","random")
 model <- models[model_ind]
 
@@ -74,15 +79,25 @@ file <- make_title(paste0(directory,"/params/"),
                           holdout_whale,"-",
                           rand_seed,"-",
                           "hmm.rds"))
-if(file.exists(file)){
-  next
-}
+#if(file.exists(file)){
+#  next
+#}
 
 # get data
 source("../HMM/load_data.R")
 
 # get rid of held out whale
 Data <- Data[!(Data$ID %in% holdout_whale),]
+
+# define states
+bhavs <- c("rest","trav","forg")
+behaviours <- c("resting","travelling","foraging")
+
+inds <- c(0,cumsum(statesPerBehaviour))
+b_inds <- list()
+b_inds$resting <- (inds[1]+1):inds[2]
+b_inds$travelling <- (inds[2]+1):inds[3]
+b_inds$foraging <- (inds[3]+1):inds[4]
 
 # set up label distribution
 if(model != "no"){
@@ -91,20 +106,6 @@ if(model != "no"){
 
 # set up DM matrix
 DM <- list()
-
-if(!(model %in% c("no"))){
-  old_hmm <- readRDS(make_title(paste0(directory,"/params/"),
-                                paste0("no","-",
-                                       holdout_whale,"-",
-                                       rand_seed,"-",
-                                       "hmm.rds")))
-  inds <- cumsum(statesPerBehaviour)
-  b_inds <- list()
-  b_inds$resting <- old_hmm$pairs[1:inds[1],2]
-  b_inds$travelling <- old_hmm$pairs[(inds[1]+1):inds[2],2]
-  b_inds$foraging <- old_hmm$pairs[(inds[2]+1):inds[3],2]
-  behaviours <- c("resting","travelling","foraging")
-}
 
 if (model %in% c("fixed_1")){
 
@@ -197,43 +198,76 @@ Par0 <- list()
 for(feature in features1){
   if(dist[[feature]] == "norm"){
     Par0[[feature]] <- matrix(rep(NA,2*N), nrow = N)
-  } else if (dist[[feature]] == "mvnorm2"){
+    Par0[[feature]][,1] <- mean(Data[,feature]) + 0.1*rnorm(N)*sd(Data[,feature]) # mean
+    Par0[[feature]][,2] <- exp(0.1*rnorm(N))/sqrt(N) * sd(Data[,feature])           # sd
+  } else if (dist[[feature]] == "mvnorm2") {
     Par0[[feature]] <- matrix(rep(NA,5*N), nrow = N)
+    featurex <- paste0(feature,".x")
+    featurey <- paste0(feature,".y")
+    Par0[[feature]][,1] <- mean(Data[,featurex]) + 0.1*rnorm(N)*sd(Data[,featurex]) # mean
+    Par0[[feature]][,2] <- mean(Data[,featurey]) + 0.1*rnorm(N)*sd(Data[,featurey]) # mean
+    Par0[[feature]][,3] <- 0.1*rnorm(N) + log(sd(Data[,featurex])) - 0.1*log(N) # sd x
+    Par0[[feature]][,4] <- 0.0                                                  # cov xy
+    Par0[[feature]][,5] <- 0.1*rnorm(N) + log(sd(Data[,featurey])) - 0.1*log(N) # sd y
   } else if (substring(dist[[feature]], 1,3) == "cat") {
     ncats <- as.integer(substring(dist[[feature]], 4))
     Par0[[feature]] <- matrix(rep(NA,(ncats-1)*N), nrow = N)
-  } else {
-    print("feature distribtuion not recognized")
+    for(j in 1:(ncats-1)){
+      Par0[[feature]][,j] <- mean(Data[,feature] == j , na.rm=T)
+    }
+    noise <- matrix(rexp(ncats*N), nrow = N)
+    noise <- noise / rowSums(noise)
+    Par0[[feature]] = 0.9*Par0[[feature]] + 0.1*noise[,-1]
   }
 }
 
-if(model == "no"){
-  for(i in 1:N){
+# get accuracy of mixture model for each behaviour and state
+accs <- matrix(rep(0,N^2),nrow=N,ncol=N)
+for(i in 1:N){
+  
+  # get data associated with the behaviour in question
+  behaviour_ind <- which(i <= cumsum(statesPerBehaviour))[1]
+  behaviour_data <- Data[Data$knownState %in% behaviour_ind & !(Data$pseudolabel),]
+  
+  # get p(X,Y)
+  pXY <- matrix(rep(0,N*nrow(behaviour_data)),
+                nrow=nrow(behaviour_data),ncol=N)
+  for(j in 1:N){
     for(feature in features1){
       if(dist[[feature]] == "norm"){
-        Par0[[feature]][i,1] <- mean(Data[,feature]) + rnorm(1)*sd(Data[,feature]) # mean
-        Par0[[feature]][i,2] <- exp(0.5*rnorm(1))/N * sd(Data[,feature])           # sd
+        pXY[,j] <- pXY[,j] + dnorm(behaviour_data[,feature],
+                                   mean=Par0[[feature]][j,1],
+                                   sd=exp(Par0[[feature]][j,2]) + 0.01)
       } else if (dist[[feature]] == "mvnorm2") {
         featurex <- paste0(feature,".x")
         featurey <- paste0(feature,".y")
-        Par0[[feature]][i,1] <- mean(Data[,featurex]) + rnorm(1)*sd(Data[,featurex]) # mean
-        Par0[[feature]][i,2] <- mean(Data[,featurey]) + rnorm(1)*sd(Data[,featurey]) # mean
-        Par0[[feature]][i,3] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurex]))     # sd x
-        Par0[[feature]][i,4] <- 0.0                                                  # cov xy
-        Par0[[feature]][i,5] <- log((exp(0.5*rnorm(1))/N) * sd(Data[,featurey]))     # sd y
+        meanx <- Par0[[feature]][j,1]
+        meany <- Par0[[feature]][j,2]
+        sigxx <- exp(Par0[[feature]][j,3]) + 0.01
+        sigyy <- exp(Par0[[feature]][j,5]) + 0.01
+        sigxy <- exp(0.5*Par0[[feature]][j,3] + 
+                     0.5*Par0[[feature]][j,5] + 
+                    -exp(-Par0[[feature]][j,4])) 
+        pXY[,j] <- pXY[,j] + dmvnorm(behaviour_data[,c(featurex,featurey)],
+                                     mean=c(meanx,meany),
+                                     sigma=matrix(c(sigxx,sigxy,sigxy,sigyy),nrow=2))          
       } else if (substring(dist[[feature]], 1,3) == "cat") {
-        ncats <- as.integer(substring(dist[[feature]], 4))
-        for(j in 1:(ncats-1)){
-          Par0[[feature]][i,j] <- mean(Data[,feature] == j , na.rm=T)
-        }
-        noise <- rexp(ncats)
-        noise <- noise / sum(noise)
-        Par0[[feature]][i,] = 0.9*Par0[[feature]][i,] + 0.1*head(noise,-1)
+        probs <- Par0[[feature]][j,]
+        probs <- c(probs,1.0-sum(probs))
+        pXY[,j] <- pXY[,j] + probs[behaviour_data[,feature]]       
       }
     }
   }
-} else {
-  Par0 <- getPar0(old_hmm)$Par
+  # get p(X|Y) and add to accuracies
+  p_X_given_Y <- pXY / rowSums(pXY)
+  accs[i,] <- colSums(p_X_given_Y) / nrow(behaviour_data)
+}
+
+hs <- HungarianSolver(-accs)
+pairs <- hs$pairs
+
+for(feature in features1){
+  Par0[[feature]] <- Par0[[feature]][pairs[,2],]
 }
 
 if(model %in% c("fixed_1","fixed_2")){
@@ -244,19 +278,9 @@ if(model %in% c("fixed_1","fixed_2")){
   Par0$label <- c(qlogis(0.1),qlogis(0.1),qlogis(0.001),qlogis(0.001))
 }
 
-# Set initial TPM
-if(model %in% "no"){
-  beta0 <- matrix(rnorm(N*(N-1),mean=-2,sd=1),nrow=1)
-} else {
-  beta0 <- getPar0(old_hmm)$beta
-}
-
-# Set initial delta
-if(model %in% "no"){
-  delta0 <- matrix(rep(1/N,N),nrow=1)
-} else {
-  delta0 <- getPar0(old_hmm)$delta
-}
+# Set initial gamma and delta
+beta0 <- matrix(rnorm(N*(N-1),mean=-2,sd=1),nrow=1)
+delta0 <- matrix(rep(1/N,N),nrow=1)
 
 # prep data
 Data0 <- prepData(Data,coordNames=NULL)
@@ -274,61 +298,92 @@ hmm <- fitHMM(data=Data0,
               fixPar=fixPar,
               userBounds=userBounds,
               workBounds=workBounds,
-              nlmPar = list('steptol'=1e-4,
-                            'iterlim'=1000))
+              nlmPar = list('iterlim'=iterlim))
 
 print(hmm)
 
-# get labels switching values
-Data <- cbind(Data,stateProbs(hmm))
-
+# find the best pairings and refit the model
+probs <- stateProbs(hmm)
+hmm$data <- cbind(hmm$data,probs)
 accs <- matrix(nrow = N, ncol = N)
 behaviours <- c("resting","travelling","foraging")
-
-# make accuracy matrix
 for(i in 1:N){
   for(j in 1:N){
     behaviour_ind <- which(i <= cumsum(statesPerBehaviour))[1]
-    behaviour_data <- Data[Data$knownState %in% behaviour_ind,]
+    behaviour_data <- hmm$data[hmm$data$knownState %in% behaviour_ind,]
     accs[i,j] <- sum(behaviour_data[,paste("state",j)])
   }
 }
+hs <- HungarianSolver(-accs)
+pairs <- hs$pairs
 
-# get pairs
-if (model %in% "no"){
-  hs <- HungarianSolver(-accs)
-  pairs <- hs$pairs
-} else {
-  pairs <- old_hmm$pairs
-}
+print(pairs)
 
-# order pairs by increasing mean of first feature
-feature <- features1[1]
-inds <- c(0,cumsum(statesPerBehaviour))
-new_pairs <- matrix(nrow = N, ncol = 2)
-new_pairs[,1] <- seq(1,N)
-
-for (i in 1:3){
-  behaviour_inds <- seq(inds[i]+1,inds[i+1])
-  old_behaviour_pairs <- pairs[behaviour_inds,2]
-  mus <- c()
-  for (j in old_behaviour_pairs) {
-    if (dist[[feature]] == "mvnorm2"){
-      mus <- c(mus,hmm$mle[[feature]]["mean.x",j])
-    } else if (dist[[feature]] == "norm"){
-      mus <- c(mus,hmm$mle[[feature]]["mean",j])
-    } else if (substring(dist[[feature]], 1,3) == "cat"){
-      mus <- c(mus,hmm$mle[[feature]]["prob1",j])
+# fix Par0
+Par0 <- getPar0(hmm)
+newPar0 <- list()
+for(feature in features1){
+  if(dist[feature] == "norm"){
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,2*N), nrow = N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
     }
+  } else if (dist[feature] == "mvnorm2") {
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,5*N), nrow=N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
+    }    
+  } else if (substring(dist[[feature]], 1,3) == "cat") {
+    ncats <- as.integer(substring(dist[[feature]], 4))
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,(ncats-1)*N), nrow=N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
+    } 
   }
-  new_pairs[behaviour_inds,2] <- old_behaviour_pairs[order(mus)]
 }
-hmm$pairs <- new_pairs
 
-print(hmm$pairs)
+if(model != "no"){
+  newPar0$label <- Par0$Par$label
+}
+
+# fix delta
+newDelta <- Par0$delta[pairs[,2]]
+
+# fix beta
+oldBeta <- Par0$beta 
+newBeta <- c()
+for(i in 1:(N-1)){
+  newBeta <- c(newBeta,0,oldBeta[(N*(i-1)+1):(N*i)])
+}
+newBeta <- c(newBeta,0)
+newBeta <- matrix(newBeta,nrow=N,byrow=T)
+newBeta <- newBeta[pairs[,2],pairs[,2]]
+newBeta0 <- c()
+for(i in 1:N){
+  newBeta0 <- c(newBeta0,newBeta[i,-i])
+}
+newBeta <- matrix(newBeta0,nrow=1)
+
+# refit the hmm
+hmm0 <- fitHMM(data=Data0,
+               nbStates=N,
+               dist=dist,
+               DM=DM,
+               beta0=newBeta,
+               delta0=(1-eps)*newDelta + eps*rep(1/N,N),
+               Par0=newPar0,
+               fixPar=fixPar,
+               userBounds=userBounds,
+               workBounds=workBounds,
+               nlmPar = list('iterlim'=iterlim))
+
+print(hmm0)
 
 # Save hmm
-saveRDS(hmm,
+saveRDS(hmm0,
         make_title(paste0(directory,"/params/"),
                    paste0(model,"-",
                           holdout_whale,"-",

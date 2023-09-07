@@ -46,7 +46,7 @@ make_title <- function(start,end){
 
 sind <- 0
 if(is.na(args)){
-  args_list <- sind:59
+  args_list <- sind:(20*5-1)
 } else {
   args_list <- c(args)
 }
@@ -75,7 +75,10 @@ model <- models[model_ind]
 
 # select holdout whale
 whale_ind <- floor(args[1] / 5) + 1
-whales <- c("none","A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
+whales <- c("none","A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 holdout_whale <- whales[whale_ind]
 
 print(model)
@@ -143,12 +146,9 @@ if(model == "no"){
                                'stepmax'=1e-100,
                                'iterlim'=1))
 }
-# add pairs to hmm0
-hmm0$pairs <- hmm$pairs
 
 # find states
-inverse_pairs <- order(hmm0$pairs[,2])
-Data$vstates <- inverse_pairs[viterbi(hmm0)]
+Data$vstates <- viterbi(hmm0)
 Data$vstates <- as.factor(Data$vstates)
 
 # prepare colors and labels

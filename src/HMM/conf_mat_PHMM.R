@@ -2,14 +2,15 @@ library(momentuHMM)
 library(dplyr)
 library(mclust)
 library(data.table)
+library(RcppHungarian)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
 
-opt_file <- args[1]
-args <- as.integer(args[2])
+opt_file <- args[1] #"logMDDD-logWTotal_1-1-1_dd-30_2023-08-30.R"
+args <- as.integer(args[2]) #0
 
 # get options
 source(paste0('../opt/',opt_file))
@@ -25,7 +26,7 @@ set.seed(1)
 
 sind <- 0
 if(is.na(args)){
-  args_list <- sind:54
+  args_list <- sind:(19*5-1)
 } else {
   args_list <- c(args)
 }
@@ -39,7 +40,10 @@ model <- models[model_ind]
 
 # select holdout whale
 whale_ind <- floor(args[1] / 5) + 1
-whales <- c("A100","A113","D21","D26","I107","I129","I145","L87","L88","R48","R58")
+whales <- c("A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 holdout_whale <- whales[whale_ind]
 
 print(model)
@@ -52,7 +56,6 @@ source("../HMM/load_data.R")
 # get (un)labelled Data for held out whale
 Data_labeled <- Data[Data$ID %in% holdout_whale,]
 Data_unlabeled <- Data[Data$ID %in% holdout_whale,]
-
 Data_unlabeled$label <- 7
 Data_unlabeled <- prepData(Data_unlabeled,coordNames=NULL)
 
@@ -107,33 +110,30 @@ if(model == "no"){
                                'iterlim'=1))
 } else {
   hmm0 <- fitHMM(data=Data_unlabeled,
-               nbStates=N,
-               dist=hmm$conditions$dist,
-               fixPar=list(label = hmm$conditions$fixPar$label),
-               DM=hmm$conditions$DM,
-               beta0=Par0$beta,
-               delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
-               Par0=Par0$Par,
-               userBounds=userBounds,
-               workBounds=workBounds,
-               nlmPar = list('stepmax'=1e-100,
-                             'iterlim'=1))
+                 nbStates=N,
+                 dist=hmm$conditions$dist,
+                 fixPar=list(label = hmm$conditions$fixPar$label),
+                 DM=hmm$conditions$DM,
+                 beta0=Par0$beta,
+                 delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
+                 Par0=Par0$Par,
+                 userBounds=userBounds,
+                 workBounds=workBounds,
+                 nlmPar = list('stepmax'=1e-100,
+                               'iterlim'=1))
 }
-# add pairs to hmm0
-hmm0$pairs <- hmm$pairs
 
-# decode states
-probs <- stateProbs(hmm0)
-inds <- cumsum(statesPerBehaviour)
+# get new indices (match best indices with each index set)
+inds <- c(0,cumsum(statesPerBehaviour))
+rest_inds <- (inds[1]+1):inds[2]
+trav_inds <- (inds[2]+1):inds[3]
+forg_inds <- (inds[3]+1):inds[4]
 
-rest_inds <- hmm0$pairs[1:inds[1],2]
-Data_labeled$prob_resting <- rowSums(probs[,rest_inds,drop=FALSE])
-
-trav_inds <- hmm0$pairs[(inds[1]+1):inds[2],2]
-Data_labeled$prob_travelling <- rowSums(probs[,trav_inds,drop=FALSE])
-
-forg_inds <- hmm0$pairs[(inds[2]+1):inds[3],2]
-Data_labeled$prob_foraging <- rowSums(probs[,forg_inds,drop=FALSE])
+# decode states with new HMM
+probs0 <- stateProbs(hmm0)
+Data_labeled$prob_resting <- rowSums(probs0[,rest_inds,drop=FALSE])
+Data_labeled$prob_travelling <- rowSums(probs0[,trav_inds,drop=FALSE])
+Data_labeled$prob_foraging <- rowSums(probs0[,forg_inds,drop=FALSE])
 
 # just get held-out whale
 Data_labeled_small <- Data_labeled[Data_labeled$knownState != 4,c("prob_resting",
@@ -155,7 +155,7 @@ for(i in 1:3){
 rownames(conf_matrix) <- c("True Resting", "True Travelling", "True Foraging")
 colnames(conf_matrix) <- c("Predicted Resting", "Predicted Travelling", "Predicted Foraging")
 
-# Save hmm
+# Save confusion matrix
 make_title <- function(start,end){
   title <- paste0(start,statesPerBehaviour[1])
   for(nstates in statesPerBehaviour[2:3]){

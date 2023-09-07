@@ -41,13 +41,17 @@ make_title <- function(start,end){
   title <- paste0(title,"_",end)
   return(title)
 }
-
+whales <- c("none","A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 whales <- c()
 if("Male" %in% sex){
-  whales <- c(whales,"D21","I107","L87","L88")
+  whales <- c(whales,"D21a","D21b","I107a","I107b","L87","L88")
 }
 if("Female" %in% sex) {
-  whales <- c(whales,"A100","A113","D26","I129","I145","R48","R58")
+  whales <- c(whales,"A100a","A100b","A113a","A113b","D26a","D26b",
+              "I129","I145a","I145b","R48a","R48b","R58a","R58b")
 }
 
 # get metrics from all models

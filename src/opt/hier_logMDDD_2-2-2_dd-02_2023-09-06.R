@@ -1,25 +1,25 @@
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
-# directory
-directory <- "../../exp/test"
+# directory to save things to
+directory <- "../../exp/hier_logMDDD_2-2-2_dd_02_2023-09-06"
 dir.create(directory, showWarnings = FALSE)
 dir.create(paste0(directory,"/params"), showWarnings = FALSE)
 dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
 
 # select number of initializations
-n_retries <- 10
-iterlim <- 1000
+n_retries <- 1
+iterlim <- 10
 
 # Select Sex
 sex <- c("Male","Female")
 
 # set if we are doing hierarchical
-hier <- FALSE
+hier <- TRUE
 share_fine <- FALSE
 span <- 5 # minutes
 
 # Select number of States
-statesPerBehaviour <- c(1,1,1) # rest, trav, forg
+statesPerBehaviour <- c(2,2,2) # rest, trav, forg
 N <- sum(statesPerBehaviour)
 N0 <- statesPerBehaviour[1]
 
@@ -31,7 +31,7 @@ dist <- list()
 #dist[["logWHigh"]] <- "norm"
 #dist[["logWTotal"]] <- "norm"
 #dist[["logW"]] <- "mvnorm2"
-#dist[["logMDDD"]] <- "mvnorm2"
+dist[["logMDDD"]] <- "mvnorm2"
 #dist[["maxDepthCat"]] <- "cat5"
 
 # hold on to features that will be need in the future
@@ -48,7 +48,7 @@ for(feature in names(dist)){
 }
 
 # Select dive duration threshold
-dd_thresh <- 30 # seconds
+dd_thresh <- 02 # seconds
 md_thresh <- 0.5 # meters
 md_threshs <- c(5,10,30,50) # meters
 
@@ -58,11 +58,11 @@ workBounds <- list()
 
 for(feature in features1){
   if(dist[[feature]] == "mvnorm2"){
-    userBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,0.01,0.00,0.01),each=N),
+    userBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,0.01,0.01,0.01),each=N),
                                       rep(c(Inf,Inf,Inf,Inf,Inf),each=N)),
                                     nrow=5*N,ncol=2)
     workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,-Inf,-Inf,-Inf),each=N),
-                                      rep(c(Inf,Inf,Inf,0.00,Inf),each=N)),
+                                      rep(c(Inf,Inf,Inf,-0.01,Inf),each=N)),
                                     nrow=5*N,ncol=2)
   } else if (dist[[feature]] == "norm"){
     userBounds[[feature]] <- matrix(c(rep(c(-Inf,0.01),each=N),

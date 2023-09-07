@@ -10,7 +10,7 @@
 
 #SBATCH --time=2:59:00
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=120-599
+#SBATCH --array=0-599
 
 module load StdEnv/2020
 module load gcc/9.3.0
@@ -19,4 +19,4 @@ module load proj/9.0.1
 module load gdal/3.5.1
 module load udunits/2.2.28
 
-Rscript ../HMM/fit_model_PHMM.R $1 $SLURM_ARRAY_TASK_ID 
+Rscript ../HMM/fit_model_PHMM.R $1 $SLURM_ARRAY_TASK_ID

@@ -1,7 +1,7 @@
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
-# directory
-directory <- "../../exp/test"
+# directory to save things to
+directory <- "../../exp/logMDDD_1-1-1_dd-30_2023-09-06"
 dir.create(directory, showWarnings = FALSE)
 dir.create(paste0(directory,"/params"), showWarnings = FALSE)
 dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
@@ -31,7 +31,7 @@ dist <- list()
 #dist[["logWHigh"]] <- "norm"
 #dist[["logWTotal"]] <- "norm"
 #dist[["logW"]] <- "mvnorm2"
-#dist[["logMDDD"]] <- "mvnorm2"
+dist[["logMDDD"]] <- "mvnorm2"
 #dist[["maxDepthCat"]] <- "cat5"
 
 # hold on to features that will be need in the future
@@ -58,11 +58,11 @@ workBounds <- list()
 
 for(feature in features1){
   if(dist[[feature]] == "mvnorm2"){
-    userBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,0.01,0.00,0.01),each=N),
+    userBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,0.01,0.01,0.01),each=N),
                                       rep(c(Inf,Inf,Inf,Inf,Inf),each=N)),
                                     nrow=5*N,ncol=2)
     workBounds[[feature]] <- matrix(c(rep(c(-Inf,-Inf,-Inf,-Inf,-Inf),each=N),
-                                      rep(c(Inf,Inf,Inf,0.00,Inf),each=N)),
+                                      rep(c(Inf,Inf,Inf,-0.01,Inf),each=N)),
                                     nrow=5*N,ncol=2)
   } else if (dist[[feature]] == "norm"){
     userBounds[[feature]] <- matrix(c(rep(c(-Inf,0.01),each=N),

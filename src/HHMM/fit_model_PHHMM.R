@@ -3,10 +3,12 @@ library(dplyr)
 library(mclust)
 library(data.table)
 library(RcppHungarian)
+library(mvtnorm)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 args <- commandArgs(trailingOnly=TRUE)
+#args <- c("hier_logMDDD_2-2-2_dd-02_2023-08-30.R",0)
 
 opt_file <- args[1]
 args <- as.integer(args[2])
@@ -42,7 +44,7 @@ make_title <- function(start,end){
 sind <- 0
 
 if(is.na(args)){
-  args_list <- sind:(60*n_retries-1)
+  args_list <- sind:(100*n_retries-1)
 } else {
   args_list <- c(args)
 }
@@ -54,13 +56,15 @@ rand_seed <- (args[1] %% n_retries) + 1
 set.seed(rand_seed)
 
 # select holdout whale
-whale_ind <- (floor(args[1] / n_retries) %% 12) + 1
-whales <- c("none","A100","A113","D21","D26",
-            "I107","I129","I145","L87","L88","R48","R58")
+whale_ind <- (floor(args[1] / n_retries) %% 20) + 1
+whales <- c("none","A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
 holdout_whale <- whales[whale_ind]
 
 # Select Model
-model_ind <- floor(args[1] / (12*n_retries)) + 1
+model_ind <- floor(args[1] / (20*n_retries)) + 1
 models <- c("no","fixed_1","fixed_2","half_random","random")
 model <- models[model_ind]
 
@@ -74,72 +78,16 @@ file <- make_title(paste0(directory,"/params/"),
                           holdout_whale,"-",
                           rand_seed,"-",
                           "hmm.rds"))
-if(file.exists(file)){
-  next
-}
+
+#if(file.exists(file)){
+#  next
+#}
 
 # get data
 source("../HMM/load_data.R")
 
 # get rid of held out whale
 Data <- Data[!(Data$ID %in% holdout_whale),]
-
-### change to hierarchical ###
-Data0 <- NULL
-for(ID in unique(Data$ID)){
-
-  boutnum <- 1
-  whale_data <- Data[Data$ID %in% ID,]
-  start <- whale_data$stime[1]
-  end <- whale_data$etime[nrow(whale_data)]
-  time <- start
-
-  while(time < end){
-
-    # add levels 1 and 2i
-    tmp1 <- as.data.frame(matrix(nrow=2,ncol=ncol(Data)+1))
-    colnames(tmp1) <- c("boutnum",colnames(Data))
-    tmp1$ID <- ID
-    tmp1$level <- c("1","2i")
-
-    # add level 2
-    tmp2 <- whale_data[(whale_data$stime >= time) & (whale_data$stime < (time + span*60)),]
-
-    rest <- any(c(1) %in% tmp2$knownState)
-    trav <- any(c(2) %in% tmp2$knownState)
-    forg <- any(c(3) %in% tmp2$knownState)
-
-    # check for repeated knownState
-    if(forg){
-      tmp2$knownState <- 3
-    }
-    else if (rest + trav > 1){
-      tmp2$knownState <- 4
-    }
-
-    if(nrow(tmp2) > 0){
-
-      # combine it all together
-      tmp2$level <- "2"
-
-      tmp1$boutnum <- boutnum
-      tmp2$boutnum <- boutnum
-      boutnum <- boutnum + 1
-
-      Data0 <- rbind(Data0,tmp1,tmp2)
-    }
-
-    # move the current time
-    if(nrow(tmp2) > 0){
-      time <- tail(tmp2,n=1)[1,"etime"]
-    } else {
-      time <- time + span*60
-    }
-  }
-}
-Data <- Data0
-rownames(Data) <- 1:nrow(Data)
-Data$label <- factor(Data$label,levels = 1:7)
 
 ### Set distributions ###
 if(model != "no"){
@@ -155,6 +103,14 @@ for(feature in names(dist)){
 
 ### Define States ###
 bhavs <- c("rest","trav","forg")
+behaviours <- c("resting","travelling","foraging")
+
+inds <- c(0,cumsum(statesPerBehaviour))
+b_inds <- list()
+b_inds$resting <- (inds[1]+1):inds[2]
+b_inds$travelling <- (inds[2]+1):inds[3]
+b_inds$foraging <- (inds[3]+1):inds[4]
+
 hierStates <- data.tree::Node$new("Killer Whale HHMM states")
 statenum <- 1
 for(i in 1:3){
@@ -168,20 +124,6 @@ for(i in 1:3){
 
 ### set up DM matrix ###
 DM <- list()
-
-if(!(model %in% c("no"))){
-  old_hmm <- readRDS(make_title(paste0(directory,"/params/"),
-                                paste0("no","-",
-                                       holdout_whale,"-",
-                                       rand_seed,"-",
-                                       "hmm.rds")))
-  inds <- cumsum(statesPerBehaviour)
-  b_inds <- list()
-  b_inds$resting <- old_hmm$pairs[1:inds[1],2]
-  b_inds$travelling <- old_hmm$pairs[(inds[1]+1):inds[2],2]
-  b_inds$foraging <- old_hmm$pairs[(inds[2]+1):inds[3],2]
-  behaviours <- c("resting","travelling","foraging")
-}
 
 if (model %in% c("fixed_1")){
 
@@ -296,32 +238,80 @@ for(feature in features1){
   }
 }
 
-if(model == "no"){
-  for(i in 1:N_working){
-    for(feature in features1){
-      if(dist[[feature]] == "norm"){
-        Par0[[feature]][i,1] <- mean(Data[,feature],na.rm=T) + rnorm(1)*sd(Data[,feature],na.rm=T) # mean
-        Par0[[feature]][i,2] <- 0.5*rnorm(1) + log(sd(Data[,feature],na.rm=T)) - log(N0)
-      } else if (dist[[feature]] == "mvnorm2") {
-        featurex <- paste0(feature,".x")
-        featurey <- paste0(feature,".y")
-        Par0[[feature]][i,1] <- mean(Data[,featurex],na.rm=T) + rnorm(1)*sd(Data[,featurex],na.rm=T) # mean
-        Par0[[feature]][i,2] <- mean(Data[,featurey],na.rm=T) + rnorm(1)*sd(Data[,featurey],na.rm=T) # mean
-        Par0[[feature]][i,3] <- 0.5*rnorm(1) + log(sd(Data[,featurex],na.rm=T)) - log(N0) # sd x
-        Par0[[feature]][i,4] <- 0.0
-        Par0[[feature]][i,5] <- 0.5*rnorm(1) + log(sd(Data[,featurey],na.rm=T)) - log(N0) # sd y
-      } else if (substring(dist[[feature]], 1,3) == "cat") {
-        ncats <- as.integer(substring(dist[[feature]], 4))
-        for(j in 1:(ncats-1)){
-          Par0[[feature]][i,j] <- log(mean(Data[,feature] == j,na.rm=T)) - log(mean(Data[,feature] == ncats,na.rm=T))
-        }
-        Par0[[feature]][i,] = Par0[[feature]][i,] + rnorm(ncats-1)
+for(i in 1:N_working){
+  for(feature in features1){
+    if(dist[[feature]] == "norm"){
+      Par0[[feature]][i,1] <- mean(Data[,feature],na.rm=T) + 0.1*rnorm(1)*sd(Data[,feature],na.rm=T) # mean
+      Par0[[feature]][i,2] <- 0.1*rnorm(1) + log(sd(Data[,feature],na.rm=T)) - 0.1*log(N0)
+    } else if (dist[[feature]] == "mvnorm2") {
+      featurex <- paste0(feature,".x")
+      featurey <- paste0(feature,".y")
+      Par0[[feature]][i,1] <- mean(Data[,featurex],na.rm=T) + 0.1*rnorm(1)*sd(Data[,featurex],na.rm=T) # mean
+      Par0[[feature]][i,2] <- mean(Data[,featurey],na.rm=T) + 0.1*rnorm(1)*sd(Data[,featurey],na.rm=T) # mean
+      Par0[[feature]][i,3] <- 0.1*rnorm(1) + log(sd(Data[,featurex],na.rm=T)) - 0.1*log(N0) # sd x
+      Par0[[feature]][i,4] <- 0.0
+      Par0[[feature]][i,5] <- 0.1*rnorm(1) + log(sd(Data[,featurey],na.rm=T)) - 0.1*log(N0) # sd y
+    } else if (substring(dist[[feature]], 1,3) == "cat") {
+      ncats <- as.integer(substring(dist[[feature]], 4))
+      for(j in 1:(ncats-1)){
+        Par0[[feature]][i,j] <- log(mean(Data[,feature] == j,na.rm=T)) - log(mean(Data[,feature] == ncats,na.rm=T))
       }
+      Par0[[feature]][i,] = Par0[[feature]][i,] + rnorm(ncats-1)
     }
   }
-} else {
-  Par0 <- getPar0(old_hmm)$Par
 }
+
+# get accuracy of mixture model for each behaviour and state
+if (!share_fine){
+  accs <- matrix(rep(0,N^2),nrow=N,ncol=N)
+  for(i in 1:N){
+    
+    # get data associated with the behaviour in question
+    behaviour_ind <- which(i <= cumsum(statesPerBehaviour))[1]
+    behaviour_data <- Data[Data$knownState %in% behaviour_ind & !(Data$pseudolabel),]
+    
+    # get p(X,Y)
+    pXY <- matrix(rep(0,N*nrow(behaviour_data)),
+                  nrow=nrow(behaviour_data),ncol=N)
+    for(j in 1:N){
+      for(feature in features1){
+        if(dist[[feature]] == "norm"){
+          pXY[,j] <- pXY[,j] + dnorm(behaviour_data[,feature],
+                                     mean=Par0[[feature]][j,1],
+                                     sd=exp(Par0[[feature]][j,2]) + 0.01)
+        } else if (dist[[feature]] == "mvnorm2") {
+          featurex <- paste0(feature,".x")
+          featurey <- paste0(feature,".y")
+          meanx <- Par0[[feature]][j,1]
+          meany <- Par0[[feature]][j,2]
+          sigxx <- exp(Par0[[feature]][j,3]) + 0.01
+          sigyy <- exp(Par0[[feature]][j,5]) + 0.01
+          sigxy <- exp(0.5*Par0[[feature]][j,3] + 
+                         0.5*Par0[[feature]][j,5] + 
+                         -exp(-Par0[[feature]][j,4])) 
+          pXY[,j] <- pXY[,j] + dmvnorm(behaviour_data[,c(featurex,featurey)],
+                                       mean=c(meanx,meany),
+                                       sigma=matrix(c(sigxx,sigxy,sigxy,sigyy),nrow=2))          
+        } else if (substring(dist[[feature]], 1,3) == "cat") {
+          probs <- Par0[[feature]][j,]
+          probs <- c(probs,1.0-sum(probs))
+          pXY[,j] <- pXY[,j] + probs[behaviour_data[,feature]]       
+        }
+      }
+    }
+    # get p(X|Y) and add to accuracies
+    p_X_given_Y <- pXY / rowSums(pXY)
+    accs[i,] <- colSums(p_X_given_Y) / nrow(behaviour_data)
+  }
+  
+  hs <- HungarianSolver(-accs)
+  pairs <- hs$pairs
+  
+  for(feature in features1){
+    Par0[[feature]] <- Par0[[feature]][pairs[,2],]
+  }
+}
+
 
 if(model %in% c("fixed_1","fixed_2")){
   Par0$label = fixPar$label
@@ -333,32 +323,23 @@ if(model %in% c("fixed_1","fixed_2")){
 
 ### get initial TPMs from previous fits ###
 hierBeta <- data.tree::Node$new("HHMM beta")
+hierBeta$AddChild(name="level1",
+                  beta=matrix(rnorm(3*(3-1),mean=-2,sd=1),nrow=1))
 
-if(model == "no"){
-  hierBeta$AddChild(name="level1",
-                    beta=matrix(rnorm(3*(3-1),mean=-2,sd=1),nrow=1))
-
-  hierBeta$AddChild(name="level2")
-  hierBeta$level2$AddChild(name="rest",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
-  hierBeta$level2$AddChild(name="trav",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
-  hierBeta$level2$AddChild(name="forg",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
-} else {
-  hierBeta <- getPar0(old_hmm)$hierBeta
-}
+hierBeta$AddChild(name="level2")
+hierBeta$level2$AddChild(name="rest",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
+hierBeta$level2$AddChild(name="trav",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
+hierBeta$level2$AddChild(name="forg",beta=matrix(rnorm(N0*(N0-1),mean=0,sd=1),nrow=1))
 
 ### get initial TPMs from previous fits ###
 hierDelta <- data.tree::Node$new("HHMM delta")
-if(model == "no"){
-  hierDelta$AddChild(name="level1",
-                     beta=matrix(rep(1/3,3),nrow=1))
+hierDelta$AddChild(name="level1",
+                   beta=matrix(rep(1/3,3),nrow=1))
 
-  hierDelta$AddChild(name="level2")
-  hierDelta$level2$AddChild(name="rest",beta=matrix(rep(1/N0,N0),nrow=1))
-  hierDelta$level2$AddChild(name="trav",beta=matrix(rep(1/N0,N0),nrow=1))
-  hierDelta$level2$AddChild(name="forg",beta=matrix(rep(1/N0,N0),nrow=1))
-} else {
-  hierDelta <- getPar0(old_hmm)$hierDelta
-}
+hierDelta$AddChild(name="level2")
+hierDelta$level2$AddChild(name="rest",beta=matrix(rep(1/N0,N0),nrow=1))
+hierDelta$level2$AddChild(name="trav",beta=matrix(rep(1/N0,N0),nrow=1))
+hierDelta$level2$AddChild(name="forg",beta=matrix(rep(1/N0,N0),nrow=1))
 
 # update user and work bounds
 for(feature in features1){
@@ -396,18 +377,7 @@ Data <- prepData(Data,
 
 Data[Data$level != 2,features2] <- NA
 
-### Check Parameters ###
-checkPar0(data=Data,
-          hierStates=hierStates,
-          hierDist=hierDist,
-          hierBeta=hierBeta,
-          hierDelta=hierDelta,
-          Par0=Par0,
-          fixPar=fixPar,
-          userBounds=userBounds,
-          workBounds=workBounds,
-          DM=DM)
-
+### fit model ###
 hmm <- fitHMM(data=Data,
                hierStates=hierStates,
                hierDist=hierDist,
@@ -418,43 +388,118 @@ hmm <- fitHMM(data=Data,
                userBounds=userBounds,
                workBounds=workBounds,
                DM=DM,
-               nlmPar = list('iterlim'=1000))
+               nlmPar = list('iterlim'=iterlim,
+                             'print.level'=2))
 
 print(hmm)
 
-# get labels switching values
-Data <- cbind(Data,stateProbs(hmm))
+# find best pairings with old HMM
+probs <- stateProbs(hmm)
+hmm$data <- cbind(hmm$data,probs)
 
+# make accuracy matrix
 accs <- matrix(nrow = 3, ncol = 3)
 behaviours <- c("resting","travelling","foraging")
 states <- c(paste("rest",1:statesPerBehaviour[1]),
             paste("trav",1:statesPerBehaviour[2]),
             paste("forg",1:statesPerBehaviour[3]))
+inds <- c(0,cumsum(statesPerBehaviour))
 
-# make accuracy matrix
 for(i in 1:3){
   for(j in 1:3){
-    behaviour_data <- Data[Data$knownState %in% i,]
-    accs[i,j] <- sum(behaviour_data[,states[(N0*(j-1)+1):(N0*j)]])
+    behaviour_data <- hmm$data[hmm$data$knownState %in% i,]
+    behaviour_data <- behaviour_data[!is.na(behaviour_data$boutnum),] %>% 
+      distinct(boutnum,.keep_all=TRUE)
+    accs[i,j] <- sum(behaviour_data[,states[(inds[j]+1):inds[j+1]]])
   }
 }
 
 # get pairs
-if (model %in% "no"){
-  hs <- HungarianSolver(-accs)
-  small_pairs <- hs$pairs
+hs <- HungarianSolver(-accs)
+small_pairs <- hs$pairs
 
-  # expand pairs to all states
-  hmm$pairs <- matrix(nrow = N, ncol = 2)
-  hmm$pairs[,1] <- seq(1,N)
-  for (i in 1:3){
-    hmm$pairs[(N0*(i-1)+1):(N0*i),2] <- (N0*(small_pairs[i,2]-1)+1):(N0*small_pairs[i,2])
-  }
-} else {
-  hmm$pairs <- old_hmm$pairs
+# expand pairs to all states
+pairs <- matrix(nrow = N, ncol = 2)
+pairs[,1] <- seq(1,N)
+for (i in 1:3){
+  pairs[(N0*(i-1)+1):(N0*i),2] <- (N0*(small_pairs[i,2]-1)+1):(N0*small_pairs[i,2])
 }
 
-print(hmm$pairs)
+# fix Par0
+Par0 <- getPar0(hmm)
+newPar0 <- list()
+for(feature in features1){
+  if(dist[feature] == "norm"){
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,2*N), nrow = N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
+    }
+  } else if (dist[feature] == "mvnorm2") {
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,5*N), nrow=N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
+    }    
+  } else if (substring(dist[[feature]], 1,3) == "cat") {
+    ncats <- as.integer(substring(dist[[feature]], 4))
+    oldPar0 <- matrix(Par0$Par[[feature]],nrow=N)
+    newPar0[[feature]] <- matrix(rep(NA,(ncats-1)*N), nrow=N)
+    for(i in 1:N){
+      newPar0[[feature]][pairs[i,1],] <- oldPar0[pairs[i,2],]
+    } 
+  }
+}
+
+# fix delta
+oldDelta <- c(0,Par0$hierDelta$level1$delta)
+newDelta <- oldDelta[small_pairs[,2]]
+newDelta <- newDelta - newDelta[1]
+newDelta <- matrix(newDelta[-1],nrow=1)
+hierDelta <- data.tree::Node$new("HHMM delta")
+hierDelta$AddChild(name="level1",delta=newDelta)
+
+hierDelta$AddChild(name="level2")
+hierDelta$level2$AddChild(name="rest",delta=Par0$hierDelta$level2[[bhavs[small_pairs[1,2]]]]$delta)
+hierDelta$level2$AddChild(name="trav",delta=Par0$hierDelta$level2[[bhavs[small_pairs[2,2]]]]$delta)
+hierDelta$level2$AddChild(name="forg",delta=Par0$hierDelta$level2[[bhavs[small_pairs[3,2]]]]$delta)
+
+# fix beta
+oldBeta <- Par0$hierBeta$level1$beta
+newBeta <- c()
+for(i in 1:(3-1)){
+  newBeta <- c(newBeta,0,oldBeta[(3*(i-1)+1):(3*i)])
+}
+newBeta <- c(newBeta,0)
+newBeta <- matrix(newBeta,nrow=3,byrow=T)
+newBeta <- newBeta[small_pairs[,2],small_pairs[,2]]
+newBeta0 <- c()
+for(i in 1:3){
+  newBeta0 <- c(newBeta0,newBeta[i,-i])
+}
+newBeta <- matrix(newBeta0,nrow=1)
+
+hierBeta <- data.tree::Node$new("HHMM beta")
+hierBeta$AddChild(name="level1",beta=newBeta)
+
+hierBeta$AddChild(name="level2")
+hierBeta$level2$AddChild(name="rest",beta=Par0$hierBeta$level2[[bhavs[small_pairs[1,2]]]]$beta)
+hierBeta$level2$AddChild(name="trav",beta=Par0$hierBeta$level2[[bhavs[small_pairs[2,2]]]]$beta)
+hierBeta$level2$AddChild(name="forg",beta=Par0$hierBeta$level2[[bhavs[small_pairs[3,2]]]]$beta)
+
+# refit the model
+hmm0 <- fitHMM(data=Data,
+              hierStates=hierStates,
+              hierDist=hierDist,
+              hierBeta=hierBeta,
+              hierDelta=hierDelta,
+              Par0=newPar0,
+              fixPar=fixPar,
+              userBounds=userBounds,
+              workBounds=workBounds,
+              DM=DM,
+              nlmPar = list('iterlim'=iterlim,
+                            'print.level'=2))
 
 # Save hmm
 saveRDS(hmm,
