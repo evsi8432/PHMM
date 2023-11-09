@@ -13,6 +13,7 @@ set.seed(1)
 
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
+args <- c("logMDDD_1-1-1_dd-30_2023-10-23.R",NA)
 
 opt_file <- args[1]
 args <- as.integer(args[2])
@@ -44,15 +45,8 @@ make_title <- function(start,end){
   return(title)
 }
 
-sind <- 0
-if(is.na(args)){
-  args_list <- sind:(20*5-1)
-} else {
-  args_list <- c(args)
-}
-
 # only load in data once
-source("../HMM/load_data.R")
+source("../preprocessing/load_data.R")
 DataBackup <- Data
 
 # load in the rawData
@@ -66,22 +60,48 @@ rawData$log_w_total <- log10(rawData$w_low + rawData$w_high)
 
 rawDataBackup <- rawData
 
-for(args in args_list){
-
-# Select Model
-model_ind <- (args[1] %% 5) + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
-model <- models[model_ind]
-
-# select holdout whale
-whale_ind <- floor(args[1] / 5) + 1
+# define whales
 whales <- c("none","A100a","A100b","A113a","A113b",
             "D21a","D21b","D26a","D26b",
             "I107a","I107b","I129","I145a","I145b",
             "L87","L88","R48a","R48b","R58a","R58b")
+n_whales <- length(whales)
+
+# define models
+source("../preprocessing/load_data.R")
+ratio <- sum(!(Data$knownState %in% 4)) / nrow(Data)
+ratio <- round(ratio,3)
+models <- list()
+models[[1]] <- c("no",     1.0)
+models[[2]] <- c("random", 1.0)
+models[[3]] <- c("fixed",  0.0)       # no weight
+models[[4]] <- c("fixed",  0.5*ratio) 
+models[[5]] <- c("fixed",  ratio)     # equal weight
+models[[6]] <- c("fixed",  0.5 + 0.5*ratio)
+models[[7]] <- c("fixed",  1.0)       # natural weight
+n_models <- length(models) 
+
+sind <- 0
+
+if(is.na(args)){
+  args_list <- sind:(n_whales*n_models-1)
+} else {
+  args_list <- c(args)
+}
+
+for(args in args_list){
+
+# Set Model
+model_ind <- (floor(args[1]) %% n_models) + 1
+model <- models[[model_ind]][1]
+lamb  <- as.numeric(models[[model_ind]][2])
+
+# Select Holdout Whale
+whale_ind <- (floor(args[1] / n_models) %% n_whales) + 1
 holdout_whale <- whales[whale_ind]
 
 print(model)
+print(lamb)
 print(holdout_whale)
 
 ### BEGIN COMPUTATION ###
@@ -90,19 +110,22 @@ print(holdout_whale)
 Data <- DataBackup
 
 if(holdout_whale == "none"){
-  whales = unique(Data$ID)
+  whales_to_keep = unique(Data$ID)
 } else {
-  whales <- holdout_whale
+  whales_to_keep <- holdout_whale
 }
-Data <- Data[Data$ID %in% whales,]
+Data <- Data[Data$ID %in% whales_to_keep,]
 if(holdout_whale != "none"){
-  Data$label <- 7
+  Data$label <- 4
 }
 Data <- prepData(Data,coordNames=NULL)
 
 # load in best hmm
 files <- Sys.glob(make_title(paste0(directory,"/params/"),
-                             paste0(model,"-",holdout_whale,"-*-hmm.rds")))
+                             paste0(model,"-",
+                                    lamb,"-",
+                                    holdout_whale,"-",
+                                    "*-hmm.rds")))
 
 best_hmm <- NULL
 best_nll <- Inf
@@ -128,8 +151,7 @@ if(model == "no"){
                  Par0=Par0$Par,
                  userBounds=userBounds,
                  workBounds=workBounds,
-                 nlmPar = list('print.level'=2,
-                               'stepmax'=1e-100,
+                 nlmPar = list('stepmax'=1e-100,
                                'iterlim'=1))
 } else {
   hmm0 <- fitHMM(data=Data,
@@ -142,8 +164,7 @@ if(model == "no"){
                  Par0=Par0$Par,
                  userBounds=userBounds,
                  workBounds=workBounds,
-                 nlmPar = list('print.level'=2,
-                               'stepmax'=1e-100,
+                 nlmPar = list('stepmax'=1e-100,
                                'iterlim'=1))
 }
 
@@ -206,7 +227,7 @@ if(holdout_whale == "none"){
                labeller = as_labeller(group.names2))
   
   ggsave(make_title(paste0(directory,"/plt/"),
-                    paste0(model,"_scatterplot-mddd.png")),
+                    paste0(model,"-",lamb,"_scatterplot-mddd.png")),
          plot = plot0,
          width = 8,
          height = 8,
@@ -228,7 +249,7 @@ if(holdout_whale == "none"){
     facet_wrap(~vstates,ncol = 2, labeller = as_labeller(group.names2))
   
   ggsave(make_title(paste0(directory,"/plt/"),
-                    paste0(model,"_scatterplot-w.png")),
+                    paste0(model,"-",lamb,"_scatterplot-w.png")),
          plot = plot1,
          width = 8,
          height = 8,
@@ -241,7 +262,7 @@ if(holdout_whale == "none"){
                        values = group.colors2)
   
   ggsave(make_title(paste0(directory,"/plt/"),
-                    paste0(model,"_ggpairs.png")),
+                    paste0(model,"-",lamb,"_ggpairs.png")),
          plot = plot2,
          width = 8,
          height = 8,
@@ -266,7 +287,7 @@ rawDataDownLong <- rawData %>%
                names_to = "feature")
 
 # plot data
-for (whale in whales){
+for (whale in whales_to_keep){
 
   dives = Data[(Data$ID %in% whale),]$divenum
   df <- rawDataDownLong[(rawDataDownLong$divenum %in% dives) &
@@ -292,6 +313,7 @@ for (whale in whales){
 
   ggsave(make_title(paste0(directory,"/plt/"),
                     paste0(model,"-",
+                           lamb,"-",
                            holdout_whale,"-",
                            "profile-",whale,".png")),
          plot = plot1,
@@ -299,33 +321,30 @@ for (whale in whales){
          height = 8,
          device='png',
          dpi=500)
-
-  if(model == "no"){
-    depth.names <- c("shallow","med-shallow","medium","med-deep","deep")
-    depth.colors <- hcl(h = seq(15, 375, length = 6),
-                        l = 65, c = 100)[1:5]
-
-    plot2 <- ggplot(df,aes(x=Time, y=value)) +
-      geom_line(aes(color=factor(maxDepthCat),
+  
+  plot_known_states = FALSE
+  if(plot_known_states & model == "no"){
+      plot2 <- ggplot(df,aes(x=Time, y=value)) +
+      geom_line(aes(color=factor(knownState),
                     group=divenum)) +
       geom_hline(yintercept = 0) +
       labs(color="", y="",
            x="Elapsed time (hours)") +
       scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
       scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-      scale_color_manual(labels=depth.names,
-                         values=depth.colors) +
+      scale_color_manual(labels=group.names1,
+                         values=group.colors1) +
       theme_classic() +
       theme(strip.background = element_blank(),
             strip.placement = "outside",
             text = element_text(size=16)) +
       guides(colour = guide_legend(override.aes = list(linewidth=3))) +
       facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
-
+    
     ggsave(make_title(paste0(directory,"/plt/"),
                       paste0(model,"-",
                              holdout_whale,"-",
-                             "profile-",whale,"-dive_types.png")),
+                             "profile-",whale,"-known_states.png")),
            plot = plot2,
            width = 8,
            height = 8,

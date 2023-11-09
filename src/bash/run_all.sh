@@ -26,3 +26,8 @@ jid3=(${sar3[3]})
 
 # Summarize the resulting models
 sbatch --dependency=afterany:$jid3 summarize_model_PHMM.sh $1 --output=/dev/null
+
+# change permissions
+lfs find ~/projects/*/ -group evsi8432
+chown -h -R evsi8432:def-nheckman -- ~/projects/def-nheckman/evsi8432/
+lfs find ~/projects/def-nheckman/evsi8432 -type d -print0 | xargs -0 chmod g+s

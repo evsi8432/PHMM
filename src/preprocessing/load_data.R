@@ -3,29 +3,42 @@ library(dplyr)
 library(mclust)
 library(data.table)
 
-# load data
-Data <- data.frame(fread('../../../dat/Final_Data_Beth.csv'))
+data_file <- '../../../dat/Final_Data_Beth.csv'
+#data_file <- '../../../dat/Final_Data_fine.csv'
 
-# assign labels of dives to dive before
-Data$pseudolabel <- FALSE
-for(i in 1:nrow(Data)){
+# load data
+Data <- data.frame(fread(data_file))
+
+# mark the data we are going to drop
+Data$keep <- TRUE
+Data$keep <- Data$keep & (Data$Sex %in% sex)
+Data$keep <- Data$keep & (Data$diveDuration >= dd_thresh)
+Data$keep <- Data$keep & (Data$maxDepth >= md_thresh)
+Data$keep <- Data$keep & !is.na(Data$ID)
+
+# assign labels of dives that have been deleted to nearest dive
+for(i in c()){#1:nrow(Data)){
   if((Data[i,"knownState"] != 4) & (Data[i,"diveDuration"] < dd_thresh)){
-    past_dives <- Data[(Data$stime < Data[i,"stime"]) &
-                         (Data$etime > Data[i,"stime"]-300) &
-                         (Data$ID == Data[i,"ID"]) &
-                         (Data$diveDuration >= dd_thresh),]
-    if(nrow(past_dives) >= 1){
-      dive_ind <- tail(rownames(past_dives),1)
+    
+    close_dives <- Data[(Data$stime < Data[i,"etime"]+300) & # 5 minutes
+                        (Data$etime > Data[i,"stime"]-300) & # 5 minutes
+                        (Data$ID == Data[i,"ID"]) &
+                        (Data$keep),]
+    
+    if(nrow(close_dives) > 0){
+      close_dives$dist <- pmin(abs(close_dives$etime - Data[i,"stime"]),
+                               abs(close_dives$stime - Data[i,"etime"]))
+      
+      dive_ind <- as.numeric(rownames(close_dives)[which.min(close_dives$dist)])
+      
       if(Data[dive_ind,"knownState"] == 4){
         Data[dive_ind,"knownState"] <- Data[i,"knownState"]
-        Data[dive_ind,"pseudolabel"] <- TRUE
       }
     }
   }
 }
 
-Data$label <- (2*Data$knownState - 1) + Data$pseudolabel
-Data$label <- factor(Data$label, levels = 1:7)
+Data$label <- factor(Data$knownState, levels = 1:4)
 
 # get values for D21 (max Depth is off for some reason)
 D21_data <- read.csv("../../../dat/dive_summaries/D21_diveMove_summary_0.5m.csv")
@@ -39,11 +52,8 @@ for(thresh in md_threshs){
   Data$maxDepthCat[Data$maxDepth > thresh] <- Data$maxDepthCat[Data$maxDepth > thresh] + 1
 }
 
-# only keep a subset of the entire data set
-Data <- Data[Data$Sex %in% sex,]
-Data <- Data[Data$diveDuration >= dd_thresh,]
-Data <- Data[Data$maxDepth >= md_thresh,]
-Data <- Data[!is.na(Data$ID),]
+# drop the rows we said we were going to drop
+Data <- Data[Data$keep,!(names(Data) %in% "keep")]
 
 # divide Data ID into two for each whale
 for(ID in unique(Data$ID)){

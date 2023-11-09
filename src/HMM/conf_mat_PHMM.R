@@ -8,9 +8,10 @@ library(RcppHungarian)
 
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
+args <- c("logMDDD_1-1-1_dd-30_2023-10-23.R",NA)
 
-opt_file <- args[1] #"logMDDD-logWTotal_1-1-1_dd-30_2023-08-30.R"
-args <- as.integer(args[2]) #0
+opt_file <- args[1]
+args <- as.integer(args[2])
 
 # get options
 source(paste0('../opt/',opt_file))
@@ -21,42 +22,60 @@ if(hier){
   quit()
 }
 
+# define whales
+whales <- c("A100a","A100b","A113a","A113b",
+            "D21a","D21b","D26a","D26b",
+            "I107a","I107b","I129","I145a","I145b",
+            "L87","L88","R48a","R48b","R58a","R58b")
+n_whales <- length(whales)
+
+# define models
+source("../preprocessing/load_data.R")
+ratio <- sum(!(Data$knownState %in% 4)) / nrow(Data)
+ratio <- round(ratio,3)
+models <- list()
+models[[1]] <- c("no",     1.0)
+models[[2]] <- c("random", 1.0)
+models[[3]] <- c("fixed",  0.0)       # no weight
+models[[4]] <- c("fixed",  0.5*ratio) 
+models[[5]] <- c("fixed",  ratio)     # equal weight
+models[[6]] <- c("fixed",  0.5 + 0.5*ratio)
+models[[7]] <- c("fixed",  1.0)       # natural weight
+n_models <- length(models) 
+
 # set seed
 set.seed(1)
 
 sind <- 0
 if(is.na(args)){
-  args_list <- sind:(19*5-1)
+  args_list <- sind:(n_whales*n_models-1)
 } else {
   args_list <- c(args)
 }
 
 for(args in args_list){
 
-# Select Model
-model_ind <- (args[1] %% 5) + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
-model <- models[model_ind]
+# Set Model
+model_ind <- (floor(args[1]) %% n_models) + 1
+model <- models[[model_ind]][1]
+lamb  <- as.numeric(models[[model_ind]][2])
 
-# select holdout whale
-whale_ind <- floor(args[1] / 5) + 1
-whales <- c("A100a","A100b","A113a","A113b",
-            "D21a","D21b","D26a","D26b",
-            "I107a","I107b","I129","I145a","I145b",
-            "L87","L88","R48a","R48b","R58a","R58b")
+# Select Holdout Whale
+whale_ind <- (floor(args[1] / n_models) %% n_whales) + 1
 holdout_whale <- whales[whale_ind]
 
 print(model)
+print(lamb)
 print(holdout_whale)
 
 ### BEGIN COMPUTATION ###
 
-source("../HMM/load_data.R")
+source("../preprocessing/load_data.R")
 
 # get (un)labelled Data for held out whale
 Data_labeled <- Data[Data$ID %in% holdout_whale,]
 Data_unlabeled <- Data[Data$ID %in% holdout_whale,]
-Data_unlabeled$label <- 7
+Data_unlabeled$label <- 4
 Data_unlabeled <- prepData(Data_unlabeled,coordNames=NULL)
 
 # load in hmm
@@ -79,7 +98,7 @@ make_title <- function(start,end){
 
 # load in best hmm
 files <- Sys.glob(make_title(paste0(directory,"/params/"),
-                             paste0(model,"-",holdout_whale,"-*-hmm.rds")))
+                             paste0(model,"-",lamb,"-",holdout_whale,"-*-hmm.rds")))
 
 best_hmm <- NULL
 best_nll <- Inf
@@ -156,26 +175,10 @@ rownames(conf_matrix) <- c("True Resting", "True Travelling", "True Foraging")
 colnames(conf_matrix) <- c("Predicted Resting", "Predicted Travelling", "Predicted Foraging")
 
 # Save confusion matrix
-make_title <- function(start,end){
-  title <- paste0(start,statesPerBehaviour[1])
-  for(nstates in statesPerBehaviour[2:3]){
-    title <- paste0(title,"-",nstates)
-  }
-  for(feature in features1){
-    title <- paste0(title,"-",feature)
-  }
-  if(length(sex) > 1){
-    title <- paste0(title,"_all")
-  } else {
-    title <- paste0(title,"_",sex)
-  }
-  title <- paste0(title,"_",end)
-  return(title)
-}
-
 write.csv(conf_matrix,
           make_title(paste0(directory,"/params/"),
                      paste0(model,"-",
+                            lamb,"-",
                             holdout_whale,"-",
                             "confusion_matrix.csv")))
 

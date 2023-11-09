@@ -10,7 +10,7 @@
 
 #SBATCH --time=2:59:00
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=0-599
+#SBATCH --array=0-999
 
 module load StdEnv/2020
 module load gcc/9.3.0

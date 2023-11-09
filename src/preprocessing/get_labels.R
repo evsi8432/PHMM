@@ -36,7 +36,7 @@ for (whale in whales){
   
   print(whale)
   
-  Data <- data.frame(fread(paste0('../dat/diary/',whale,'/processed_Data_',whale,'.csv'),
+  Data <- data.frame(fread(paste0('../../dat/diary/',whale,'/processed_Data_',whale,'.csv'),
                      colClasses=c("level"="character")))
   
   ### prepare data for HHMM ###
@@ -127,8 +127,6 @@ for (whale in whales){
   
   ethogram$stime <- ethogram$time + ethogram$`Start (s)`
   ethogram$etime <- ethogram$time + ethogram$`Stop (s)`
-  
-  ethogram
   
   # get dives when cam is off
   camDives <- unique(rawData[rawData$camon==1,"divenum"])

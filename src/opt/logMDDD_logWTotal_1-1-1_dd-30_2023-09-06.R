@@ -1,7 +1,7 @@
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # directory to save things to
-directory <- "../../exp/hier_logMDDD_2-2-2_dd_02_2023-09-06"
+directory <- "../../exp/logMDDD_logWTotal_1-1-1_dd-30_2023-09-06"
 dir.create(directory, showWarnings = FALSE)
 dir.create(paste0(directory,"/params"), showWarnings = FALSE)
 dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
@@ -14,12 +14,12 @@ iterlim <- 1000
 sex <- c("Male","Female")
 
 # set if we are doing hierarchical
-hier <- TRUE
+hier <- FALSE
 share_fine <- FALSE
 span <- 5 # minutes
 
 # Select number of States
-statesPerBehaviour <- c(2,2,2) # rest, trav, forg
+statesPerBehaviour <- c(1,1,1) # rest, trav, forg
 N <- sum(statesPerBehaviour)
 N0 <- statesPerBehaviour[1]
 
@@ -29,7 +29,7 @@ dist <- list()
 #dist[["logDiveDuration"]] <- "norm"
 #dist[["logWLow"]] <- "norm"
 #dist[["logWHigh"]] <- "norm"
-#dist[["logWTotal"]] <- "norm"
+dist[["logWTotal"]] <- "norm"
 #dist[["logW"]] <- "mvnorm2"
 dist[["logMDDD"]] <- "mvnorm2"
 #dist[["maxDepthCat"]] <- "cat5"
@@ -48,7 +48,7 @@ for(feature in names(dist)){
 }
 
 # Select dive duration threshold
-dd_thresh <- 02 # seconds
+dd_thresh <- 30 # seconds
 md_thresh <- 0.5 # meters
 md_threshs <- c(5,10,30,50) # meters
 

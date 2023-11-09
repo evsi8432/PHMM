@@ -7,7 +7,9 @@ library(mvtnorm)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
+# get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
+#args <- c("hier_logMDDD_logWTotal_2-2-2_dd-02_2023-09-06.R",0)
 #args <- c("hier_logMDDD_2-2-2_dd-02_2023-08-30.R",0)
 
 opt_file <- args[1]
@@ -44,7 +46,7 @@ make_title <- function(start,end){
 sind <- 0
 
 if(is.na(args)){
-  args_list <- sind:(100*n_retries-1)
+  args_list <- sind:(120*n_retries-1)
 } else {
   args_list <- c(args)
 }
@@ -65,7 +67,7 @@ holdout_whale <- whales[whale_ind]
 
 # Select Model
 model_ind <- floor(args[1] / (20*n_retries)) + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
+models <- c("no","fixed_1","fixed_2","half_random","random","random_2")
 model <- models[model_ind]
 
 print(rand_seed)
@@ -79,9 +81,10 @@ file <- make_title(paste0(directory,"/params/"),
                           rand_seed,"-",
                           "hmm.rds"))
 
-#if(file.exists(file)){
-#  next
-#}
+if(file.exists(file)){
+  print(paste(file,"already exists. continuing..."))
+  next
+}
 
 # get data
 source("../HMM/load_data.R")
@@ -199,9 +202,16 @@ for(feature in features1){
                               nrow=N*5,ncol=N*5)       
     }
   } else if(dist[feature] == "norm"){
-    DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1,0,0,0),diag(N_working)),
-                                  kronecker(c(0,0,0,1,1,1),diag(N_working))),
-                            nrow=N*2,ncol=N_working*2)
+    if(share_fine){
+      DM[[feature]] <- matrix(cbind(kronecker(c(1,1,1,0,0,0),diag(N_working)),
+                                    kronecker(c(0,0,0,1,1,1),diag(N_working))),
+                              nrow=N*2,ncol=N_working*2)
+    } else {
+      DM[[feature]] <- matrix(cbind(kronecker(c(1,0),diag(N_working)),
+                                    kronecker(c(0,1),diag(N_working))),
+                              nrow=N*2,ncol=N_working*2)
+    }
+
   } else if (substring(dist[[feature]], 1,3) == "cat"){
     ncats <- as.integer(substring(dist[[feature]], 4))
     if(share_fine){
@@ -388,10 +398,7 @@ hmm <- fitHMM(data=Data,
                userBounds=userBounds,
                workBounds=workBounds,
                DM=DM,
-               nlmPar = list('iterlim'=iterlim,
-                             'print.level'=2))
-
-print(hmm)
+               nlmPar = list('iterlim'=iterlim))
 
 # find best pairings with old HMM
 probs <- stateProbs(hmm)
@@ -451,6 +458,10 @@ for(feature in features1){
   }
 }
 
+if(model != "no"){
+  newPar0$label <- Par0$Par$label
+}
+
 # fix delta
 oldDelta <- c(0,Par0$hierDelta$level1$delta)
 newDelta <- oldDelta[small_pairs[,2]]
@@ -498,8 +509,7 @@ hmm0 <- fitHMM(data=Data,
               userBounds=userBounds,
               workBounds=workBounds,
               DM=DM,
-              nlmPar = list('iterlim'=iterlim,
-                            'print.level'=2))
+              nlmPar = list('iterlim'=iterlim))
 
 # Save hmm
 saveRDS(hmm,

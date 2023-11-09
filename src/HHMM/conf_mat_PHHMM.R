@@ -35,7 +35,7 @@ make_title <- function(start,end){
 sind <- 0
 
 if(is.na(args)){
-  args_list <- sind:(19*5-1)
+  args_list <- sind:(19*6-1)
 } else {
   args_list <- c(args)
 }
@@ -46,12 +46,12 @@ for(args in args_list){
 set.seed(1)
 
 # Select Model
-model_ind <- (args[1] %% 5) + 1
-models <- c("no","fixed_1","fixed_2","half_random","random")
+model_ind <- (args[1] %% 6) + 1
+models <- c("no","fixed_1","fixed_2","half_random","random","random_2")
 model <- models[model_ind]
 
 # select holdout whale
-whale_ind <- floor(args[1] / 5) + 1
+whale_ind <- floor(args[1] / 6) + 1
 whales <- c("A100a","A100b","A113a","A113b",
             "D21a","D21b","D26a","D26b",
             "I107a","I107b","I129","I145a","I145b",
@@ -118,11 +118,17 @@ hmm0 <- fitHMM(data=Data_unlabeled,
                nlmPar = list('stepmax'=1e-100,
                              'iterlim'=1))
 
+# get new indices (match best indices with each index set)
+inds <- c(0,cumsum(statesPerBehaviour))
+rest_inds <- (inds[1]+1):inds[2]
+trav_inds <- (inds[2]+1):inds[3]
+forg_inds <- (inds[3]+1):inds[4]
+
 # decode states
-probs <- stateProbs(hmm0)
-Data_labeled$prob_resting <- rowSums(probs[,rest_inds,drop=FALSE])
-Data_labeled$prob_travelling <- rowSums(probs[,trav_inds,drop=FALSE])
-Data_labeled$prob_foraging <- rowSums(probs[,forg_inds,drop=FALSE])
+probs0 <- stateProbs(hmm0)
+Data_labeled$prob_resting <- rowSums(probs0[,rest_inds,drop=FALSE])
+Data_labeled$prob_travelling <- rowSums(probs0[,trav_inds,drop=FALSE])
+Data_labeled$prob_foraging <- rowSums(probs0[,forg_inds,drop=FALSE])
 
 # just get held-out whale
 Data_labeled_small <- Data_labeled[Data_labeled$knownState != 4,c("prob_resting",

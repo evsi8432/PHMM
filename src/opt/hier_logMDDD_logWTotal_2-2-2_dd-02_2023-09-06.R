@@ -1,7 +1,7 @@
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # directory to save things to
-directory <- "../../exp/hier_logMDDD_2-2-2_dd_02_2023-09-06"
+directory <- "../../exp/hier_logMDDD_logWTotal_2-2-2_dd_02_2023-09-06"
 dir.create(directory, showWarnings = FALSE)
 dir.create(paste0(directory,"/params"), showWarnings = FALSE)
 dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
@@ -29,7 +29,7 @@ dist <- list()
 #dist[["logDiveDuration"]] <- "norm"
 #dist[["logWLow"]] <- "norm"
 #dist[["logWHigh"]] <- "norm"
-#dist[["logWTotal"]] <- "norm"
+dist[["logWTotal"]] <- "norm"
 #dist[["logW"]] <- "mvnorm2"
 dist[["logMDDD"]] <- "mvnorm2"
 #dist[["maxDepthCat"]] <- "cat5"
