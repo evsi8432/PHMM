@@ -90,7 +90,7 @@ Prep_Data <- function(whale){
   rawData$Time <- as.POSIXct(rawData$Time,format="%d-%b-%Y %H:%M:%OS")
   date0 = format(rawData$Time[1], "%Y-%m-%d")  # prone to error for overnight data
   
-  # get dynamic Acceleration and VeDBA (subtract gravity)
+  # get dynamic Acceleration and VeDBA(subtract gravity)
   g = 1 # g's
   
   gw1 <- g*sin(rawData$pitch)

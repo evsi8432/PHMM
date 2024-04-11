@@ -6,7 +6,7 @@ library(data.table)
 library(ggplot2)
 library(GGally)
 
-#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
+setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # set seed
 set.seed(1)
@@ -230,7 +230,8 @@ if(holdout_whale == "none"){
                     paste0(model,"-",lamb,"_scatterplot-mddd.png")),
          plot = plot0,
          width = 8,
-         height = 8,
+         height = 4,
+         units = "in",
          device='png',
          dpi=500)
   
@@ -252,7 +253,8 @@ if(holdout_whale == "none"){
                     paste0(model,"-",lamb,"_scatterplot-w.png")),
          plot = plot1,
          width = 8,
-         height = 8,
+         height = 4,
+         units = "in",
          device='png',
          dpi=500)
   
@@ -265,7 +267,8 @@ if(holdout_whale == "none"){
                     paste0(model,"-",lamb,"_ggpairs.png")),
          plot = plot2,
          width = 8,
-         height = 8,
+         height = 4,
+         units = "in",
          device='png',
          dpi=500)
 }
@@ -292,14 +295,15 @@ for (whale in whales_to_keep){
   dives = Data[(Data$ID %in% whale),]$divenum
   df <- rawDataDownLong[(rawDataDownLong$divenum %in% dives) &
                           (rawDataDownLong$segnum != 0),]
+  stime <- as.character(min(df$Time))
   df$Time <- (df$Time - min(df$Time))/3600
-
+  
   plot1 <- ggplot(df,aes(x=Time, y=value)) +
     geom_line(aes(color=factor(vstate1),
                   group=divenum)) +
     geom_hline(yintercept = 0) +
     labs(color="", y="",
-         x="Elapsed time (hours)") +
+         x=paste("Elapsed time (hours after",stime,")")) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
     scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
     scale_color_manual(labels=group.names2,
@@ -309,7 +313,7 @@ for (whale in whales_to_keep){
           strip.placement = "outside",
           text = element_text(size=16)) +
     guides(colour = guide_legend(override.aes = list(linewidth=3))) +
-    facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs),scales = "free_y")
+    facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
 
   ggsave(make_title(paste0(directory,"/plt/"),
                     paste0(model,"-",
@@ -318,28 +322,29 @@ for (whale in whales_to_keep){
                            "profile-",whale,".png")),
          plot = plot1,
          width = 8,
-         height = 8,
+         height = 4,
+         units = "in",
          device='png',
          dpi=500)
   
   plot_known_states = FALSE
   if(plot_known_states & model == "no"){
       plot2 <- ggplot(df,aes(x=Time, y=value)) +
-      geom_line(aes(color=factor(knownState),
-                    group=divenum)) +
-      geom_hline(yintercept = 0) +
-      labs(color="", y="",
-           x="Elapsed time (hours)") +
-      scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-      scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-      scale_color_manual(labels=group.names1,
-                         values=group.colors1) +
-      theme_classic() +
-      theme(strip.background = element_blank(),
-            strip.placement = "outside",
-            text = element_text(size=16)) +
-      guides(colour = guide_legend(override.aes = list(linewidth=3))) +
-      facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
+        geom_line(aes(color=factor(knownState),
+                      group=divenum)) +
+        geom_hline(yintercept = 0) +
+        labs(color="", y="",
+             x=paste("Elapsed time (hours after",stime,")")) +
+        scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+        scale_color_manual(labels=group.names1,
+                           values=group.colors1) +
+        theme_classic() +
+        theme(strip.background = element_blank(),
+              strip.placement = "outside",
+              text = element_text(size=16)) +
+        guides(colour = guide_legend(override.aes = list(linewidth=3))) +
+        facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
     
     ggsave(make_title(paste0(directory,"/plt/"),
                       paste0(model,"-",
@@ -347,7 +352,8 @@ for (whale in whales_to_keep){
                              "profile-",whale,"-known_states.png")),
            plot = plot2,
            width = 8,
-           height = 8,
+           height = 4,
+           units = "in",
            device='png',
            dpi=500)
   }
