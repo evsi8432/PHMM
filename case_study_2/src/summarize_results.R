@@ -20,9 +20,10 @@ rcl_PHMM <- conf_matrix_PHMM["True Positive","Pred Positive"] / sum(conf_matrix_
 write.csv(conf_matrix_base,paste0(directory,"/params/conf_mat_base.csv"))
 write.csv(conf_matrix_PHMM,paste0(directory,"/params/conf_mat_",
                                   paste0(setdiff(names(dist),"knownState"),collapse = "_"),"_",
-                                  log10(lambda),".csv"))
+                                  round(log10(lambda),3),"_",
+                                  K,".csv"))
 
-write.csv(AUCs_base,paste0(directory,"/params/AUC_base",K,".csv"))
+write.csv(AUCs_base,paste0(directory,"/params/AUC_base_",K,".csv"))
 write.csv(AUCs_PHMM,paste0(directory,"/params/AUC_",
                                       paste0(setdiff(names(dist),"knownState"),collapse = "_"),"_",
                                       round(log10(lambda),3),"_",

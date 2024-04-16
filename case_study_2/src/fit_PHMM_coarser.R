@@ -12,11 +12,11 @@ if(lambda == -1){
 dist[["delt_d"]] <- "norm"
 #dist[["logHtv"]] <- "norm"
 #dist[["logJpNorm"]] <- "norm"
-#dist[["rajp"]] <- "vm"
-#dist[["htv"]] <- "gamma"
-#dist[["jp_normed"]] <- "gamma"
-dist[["logWLow"]] <- "norm"
-dist[["logWHigh"]] <- "norm"
+dist[["rajp"]] <- "vm"
+dist[["htv"]] <- "gamma"
+dist[["jp_normed"]] <- "gamma"
+#dist[["logWLow"]] <- "norm"
+#dist[["logWHigh"]] <- "norm"
 #dist[["eating"]] <- "cat3" # crunch, scales, nothing
 #dist[["echo"]] <- "cat3" # steady, rapid, nothing
 #dist[["forage"]] <- "cat3" # chase, capture, nothing
@@ -31,9 +31,12 @@ for(feature in names(dist)){
     DM0 <- diag(N^2)
   } else if(dist[[feature]] %in% c("norm","gamma")){
     DM0 <- kronecker(diag(2),
-                     rbind(c(1,0,0),diag(3),c(1,0,0),c(1,0,0))) 
+                     rbind(c(1,0,0),diag(3),c(1,0,0),c(1,0,0)))
+    #DM0 <- kronecker(diag(2),
+    #                 rbind(diag((N-1)),c(rep(0,(N-2)),1)))
   } else if (dist[[feature]] == "vm"){
     DM0 <- rbind(c(1,0,0),diag(3),c(1,0,0),c(1,0,0))
+    #DM0 <- rbind(diag((N-1)),c(rep(0,(N-2)),1))
   } 
   DM[[feature]] <- DM0
 }
@@ -79,6 +82,9 @@ Par0[["logWHigh"]] <- c(c(1, 4, 6), # means
 Par0[["htv"]] <- c(log(c(0.2,0.5,2.0)), # means
                    log(c(0.1,0.4,0.5))) # sds
 
+#Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,2.0,0.2)), # means
+#                   log(c(0.1,0.1,0.4,0.5,0.1))) # sds
+
 Par0[["rajp"]] <- c(log(c(2, 1, 0.1)))  # concentrations
 
 Par0[["logJpNorm"]] <- c(c(1, 1, 2,   4, 1), # means
@@ -86,6 +92,8 @@ Par0[["logJpNorm"]] <- c(c(1, 1, 2,   4, 1), # means
 
 Par0[["jp_normed"]] <- c(log(c(3,5,25)), # means
                          log(c(2,15,5))) # sds
+#Par0[["jp_normed"]] <- c(log(c(3,3,5,25,3)), # means
+#                         log(c(2,2,15,5,2))) # sds
 
 if(lambda == -1){
   Par0[["knownState"]] <- c(-99,-99,-99,-99,-99,-99, # prob desc label, each state
