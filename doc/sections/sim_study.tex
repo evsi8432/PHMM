@@ -1,0 +1,69 @@
+%\section{Simulation study}
+
+To explore issues that arise when data generated from a PHMM is fit using a misspecified model, we simulated $500$ data sets made up of $T = 100$ observations from a PHMM with $N = 3$ hidden states. The probability transition matrix was set to 
+%
+\begin{equation*}
+   \Gamma = \begin{pmatrix} 
+                0.8 & 0.1 & 0.1 \\
+                0.1 & 0.8 & 0.1 \\
+                0.1 & 0.1 & 0.8 
+            \end{pmatrix}, 
+\end{equation*}
+%
+with stationary distribution $\delta = \begin{pmatrix} 1/3 & 1/3 & 1/3 \end{pmatrix}$. 
+%
+The emission distributions for the data, $\{Y_t\}_{t=1}^{100}$, were set to normal distributions with densities
+\begin{equation*}
+    f^{(i)}(y_t) = \phi(y_t,\mu^{(i)},\sigma^{(i)2}),
+\end{equation*}
+where $\phi(y_t,\mu^{(i)},\sigma^{(i)2})$ is the density of a normal distribution with mean $\mu^{(i)}$ and variance $\sigma^{(i)2}$ evaluated at $y_t$. We set $\mu^{(1)} = -1$, $\sigma^{(1)} = 0.5$, $\mu^{(2)} = 0$, $\sigma^{(2)}=0.5$, $\mu^{(3)} = 1$, and $\sigma^{(3)} = 0.5$.
+
+Finally, we set the emission distributions for the labels, $\{L_t\}_{t=1}^{100}$, such that
+\begin{equation*}
+    f^{(1)}(\ell_t = 1|y_t) = f^{(2)}(\ell_t = 2|y_t) = 0 \quad \text{and} \quad f^{(3)}(\ell_t = 3|y_t) = \text{expit}(-1+y_t)
+\end{equation*}
+In words, labels were only observed when $x_t = 3$, and the probability of observing a label was an increasing function of $y_t$. This is notable because the expected value of $y_t$ was larger for $x_t = 3$ compared to $x_t = 1$ and $x_t = 2$.
+
+I fit three different HMMs to each simulated data set: 
+%
+\begin{enumerate}
+    \item A traditional HMM which ignores $\ell_t$ as a data stream altogether.
+    \item A PHMM which defines the label emission probability as $f_t^{(i)}(\ell_t = i|y_t)$. This label emission probability is identical to that from Equation (\ref{eqn:PHMM_emis_niave}) and \cite{McClintock:2018}.
+    \item A PHMM with the following label emission probabilities:
+    \begin{gather}
+        f^{(1)}(\ell_t = 1|y_t) = f^{(2)}(\ell_t = 2|y_t) = 0, \enspace \text{and} \nonumber \\
+        %
+        f^{(3)}(\ell_t = 3|y_t) = \text{expit}(\theta^{(3)}_0+\theta^{(3)}_1 y_t).
+        \label{eqn:PHMM_emis_ss}
+    \end{gather}
+\end{enumerate}
+
+The simulated data represents a process for which labels are observed preferentially (i.e. labels are more likely to be observed when $y_t$ is larger). The first model (model 1) represents the situation where the labels are not used at all. The second model (model 2) uses the labels but assumes that label observation times are known \textit{a priori} and does not explicitly model any dependence between $L_t$ and $X_t$ or $Y_t$. The final model (model 3) accounts for dependence between $L_t$ and $X_t$ or $Y_t$ and includes the generating process of the simulated data. In particular, the data was generated from model 3 with $\theta^{(3)}_0 = -1$ and $\theta^{(3)}_1 = 1$.
+
+Figure (\ref{fig:EDA_PHMM}) shows scatter plots of the maximum likelihood estimates of each emission distribution for each simulated data set. Table (\ref{tbl:EDA_PHMM}) lists the average parameter estimates and root mean squared errors for each model.
+%
+\begin{figure}
+    \centering
+    \includegraphics[width=2in]{../plt/state_1.png}
+    \includegraphics[width=2in]{../plt/state_2.png}
+    \includegraphics[width=2in]{../plt/state_3.png}
+    \caption{Maximum likelihood estimates for emissions distributions of three separate PHMM. True parameters are denoted with a black diamond. Each small dot corresponds to a single MLE from a data set of length $T=100$, and the larger circles represent averages values over $500$ data sets. Model 1 is a traditional HMM, model 2 is a PHMM which models label observation times as fixed \citep{McClintock:2018}, and model 3 is a PHMM which explicitly models the label observation times as in Equation (\ref{eqn:PHMM_emis_ss}).}
+    \label{fig:EDA_PHMM}
+\end{figure}
+%
+\begin{table}
+\centering
+\begin{tabular}{c|cc|cc|cc}
+Model & $\hat \mu^{(1)}$ & $\hat \sigma^{(1)}$ & $\hat \mu^{(2)}$ & $\hat \sigma^{(2)}$ & $\hat \mu^{(3)}$.       & $\hat \sigma^{(3)}$ \\ \hline
+Truth & $-1.00$          & $0.50$              & $0.00$           & $0.50$              & $1.00$                  & $0.50$              \\
+1     & $-1.01 (0.17)$   & $0.47 (0.10)$       & $0.00 (0.23)$    & $0.44 (0.15)$       & $1.02 (0.18)$           & $0.47 (0.11)$     \\
+2     & $-1.03 (0.15)$   & $0.46 (0.10)$       & $-0.13 (0.26)$   & $0.39 (0.17)$       & $0.89 (0.21)$           & $0.52 (0.10)$     \\
+3     & $-1.00 (0.16)$   & $0.48 (0.10)$       & $0.03 (0.21)$    & $0.46 (0.13)$       & $1.02 (\mathbf{0.13})$  & $0.48 (0.09)$
+\end{tabular}
+\caption{Maximum likelihood parameter estimates from model 1 (HMM without labels), model 2 (PHMM treating label observation times as fixed), and model 3 (PHMM treating label observation times as random). Parentheses refer to the average root mean squared error for each parameter estimate.}
+\label{tbl:EDA_PHMM}
+\end{table}
+%
+Model 1 and model 3 give similar \textit{average} MLE estimates for all parameters, which seems to imply that the two models are similar. However, all parameter estimates associated with model 3 have the lowest average root mean squared error among the three models. This effect is especially pronounced for $\hat \mu^{(3)}$, whose average root mean squared error is approximately 30\% lower for model 3 compared to the other two models. 
+%Model 3 makes use of labels for hidden state 3, which can refine parameter estimates, so the relative accuracy of $\hat \mu^{(3)}$ makes sense. 
+Model 2 produces poor parameter estimates compared to model 1 and model 3. In particular, model 2 tends to overestimate $\sigma^{(3)}$ and underestimate $\mu^{(2)}$, $\sigma^{(2)}$, and $\mu^{(3)}$. It is interesting that model 2 tends to \textit{underestimate} $\mu^{(3)}$ because labels are more likely to be observed for \textit{large} values of $y_t$. This counter-intuitive result highlights that model misspecification can affect parameter estimates in unexpected ways. In addition, the fact that model 2 produced poorer estimates than model 1 leads to the surprising conclusion that using mis-specified labels can be worse than not using labels at all. We hypothesize that performance of model 3 relative to model 1 will become better as the probability of label observation increases. We also predict that the performance of model 2 relative to model 3 will deteriorate as the dependence between $L_t$ and $X_t$ or $Y_t$ grows stronger. Testing this hypothesis formally is an area of further work for my thesis.
