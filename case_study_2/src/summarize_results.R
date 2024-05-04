@@ -29,3 +29,6 @@ write.csv(AUCs_PHMM,paste0(directory,"/params/AUC_",
                                       round(log10(lambda),3),"_",
                                       K,".csv"))
 
+# make plots of AUCs
+
+

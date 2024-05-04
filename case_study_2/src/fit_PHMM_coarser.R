@@ -1,3 +1,6 @@
+# set random seed
+set.seed(rand_seed)
+
 # define states
 bhavs <- c("descent","bottom",
            "chase","crunch",
@@ -60,40 +63,26 @@ if(lambda == -1){
 
 # fix beta
 fixPar$beta <- c(       NA,-1e2,-1e2,  NA,-1e2,  # descent
-                        -1e2,       NA,-1e2,  NA,-1e2,  # bottom
-                        -1e2,  NA,       NA,  NA,-1e2,  # chase
-                        -1e2,-1e2,-1e2,     -1e2, 1e2,  # crunch
-                        -1e2,-1e2,-1e2,-1e2,     -1e2,  # ascent 1
-                        -1e2,-1e2,-1e2,-1e2,-1e2      ) # ascent 2
+                 -1e2,       NA,-1e2,  NA,-1e2,  # bottom
+                 -1e2,  NA,       NA,  NA,-1e2,  # chase
+                 -1e2,-1e2,-1e2,     -1e2, 1e2,  # crunch
+                 -1e2,-1e2,-1e2,-1e2,     -1e2,  # ascent 1
+                 -1e2,-1e2,-1e2,-1e2,-1e2      ) # ascent 2
 
 fixPar$delta <- c(1.0-5*eps,eps,eps,eps,eps,eps)
 
 # set initial parameters
 Par0 <- list()
-Par0[["delt_d"]] <- c(c(20,  0,   0,  0,-20), # means
-                  log(c(10, 2.0,2.0,2.0,10))) # sds
+Par0[["delt_d"]] <- c(c(20,  0,   0,  0,-20) + rnorm(5, sd = c(10,0,0,0,10)), # means
+                  log(c(10, 2.0,2.0,2.0,10)) + rnorm(5, sd = 1)) # sds
 
-Par0[["logWLow"]] <- c(c(2, 5, 6), # means
-                   log(c(2, 1, 1))) # sds
+Par0[["htv"]] <- c(log(c(0.2,0.5,2.0)) + rnorm(3, sd = 1), # means
+                   log(c(0.1,0.4,0.5)) + rnorm(3, sd = 1)) # sds
 
-Par0[["logWHigh"]] <- c(c(1, 4, 6), # means
-                    log(c(2, 1, 1))) # sds
+Par0[["rajp"]] <- c(log(c(2, 1, 0.1)) + rnorm(3, sd = 1))  # concentrations
 
-Par0[["htv"]] <- c(log(c(0.2,0.5,2.0)), # means
-                   log(c(0.1,0.4,0.5))) # sds
-
-#Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,2.0,0.2)), # means
-#                   log(c(0.1,0.1,0.4,0.5,0.1))) # sds
-
-Par0[["rajp"]] <- c(log(c(2, 1, 0.1)))  # concentrations
-
-Par0[["logJpNorm"]] <- c(c(1, 1, 2,   4, 1), # means
-                     log(c(1, 1, 1, 0.5, 1))) # sds
-
-Par0[["jp_normed"]] <- c(log(c(3,5,25)), # means
-                         log(c(2,15,5))) # sds
-#Par0[["jp_normed"]] <- c(log(c(3,3,5,25,3)), # means
-#                         log(c(2,2,15,5,2))) # sds
+Par0[["jp_normed"]] <- c(log(c(3,5,25)) + rnorm(3, sd = 1), # means
+                         log(c(2,15,5)) + rnorm(3, sd = 1)) # sds
 
 if(lambda == -1){
   Par0[["knownState"]] <- c(-99,-99,-99,-99,-99,-99, # prob desc label, each state
@@ -106,12 +95,12 @@ if(lambda == -1){
 
 
 # pick initial beta
-beta0  <- c(       -3,-1e2,-1e2,  -3,-1e2,  # descent
-                   -1e2,       -3,-1e2,  -3,-1e2,  # bottom
-                   -1e2,  -3,       -3,  -3,-1e2,  # chase
-                   -1e2,-1e2,-1e2,     -1e2, 1e2,  # crunch
-                   -1e2,-1e2,-1e2,-1e2,     -1e2,  # ascent 1
-                   -1e2,-1e2,-1e2,-1e2,-1e2      ) # ascent 2
+beta0  <- c(       -3 + 2*rnorm(1),-1e2,-1e2,  -3 + 2*rnorm(1),-1e2,  # descent
+            -1e2,       -3 + 2*rnorm(1),-1e2,  -3 + 2*rnorm(1),-1e2,  # bottom
+            -1e2,  -3 + 2*rnorm(1),       -3 + 2*rnorm(1),  -3 + 2*rnorm(1),-1e2,  # chase
+            -1e2,-1e2,-1e2,     -1e2, 1e2,  # crunch
+            -1e2,-1e2,-1e2,-1e2,     -1e2,  # ascent 1
+            -1e2,-1e2,-1e2,-1e2,-1e2      ) # ascent 2
 
 beta0 <- matrix(beta0,nrow=1)
 
@@ -227,8 +216,7 @@ if(lambda == -1){
                 fixPar=fixPar,
                 lambda=1.0,
                 stateNames = bhavs,
-                nlmPar = list('iterlim'=1000,
-                              'print.level'=2))
+                nlmPar = list('iterlim'=1000))
 } else {
   hmm <- fitHMM(data=Data_less_fine_final[Data_less_fine_final$ID %in% train_dives,],
                 nbStates=N,
@@ -241,8 +229,7 @@ if(lambda == -1){
                 knownStates=knownStates,
                 lambda=lambda,
                 stateNames = bhavs,
-                nlmPar = list('iterlim'=1000,
-                              'print.level'=2))
+                nlmPar = list('iterlim'=1000))
 }
 
 print(hmm)
@@ -250,6 +237,7 @@ print(hmm)
 model_name <- paste0("hmm_",
                      paste0(setdiff(names(dist),"knownState"),collapse = "_"),"_",
                      log10(lambda),"_",
-                     k,".rds")
+                     k,"_",
+                     rand_seed,".rds")
 
 saveRDS(hmm,paste0(directory,"/params/",model_name))

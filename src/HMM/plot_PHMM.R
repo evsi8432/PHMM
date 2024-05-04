@@ -184,10 +184,10 @@ group.colors2 <- c()
 statenum <- 1
 
 for(i in 1:3){
-  group.names1 <- c(group.names1, paste(behaviours[i],1))
+  group.names1 <- c(group.names1, behaviours[i])#paste(behaviours[i],1))
   group.colors1 <- c(group.colors1, colors[statenum])
   for(j in 1:statesPerBehaviour[i]){
-    group.names2 <- c(group.names2, paste(behaviours[i],j))
+    group.names2 <- c(group.names2, behaviours[i])#paste(behaviours[i],j))
     group.colors2 <- c(group.colors2, colors[statenum])
     statenum <- statenum + 1
   }
@@ -209,6 +209,7 @@ labs <- c(Elevation = "Depth (meters)",
           postDiveInt = "Post Dive Interval (s)")
 
 if(holdout_whale == "none"){
+  
   # plot scatterplots
   plot0 <- ggplot(Data,
                   aes(x=diveDuration,
@@ -247,7 +248,7 @@ if(holdout_whale == "none"){
     labs(color="Labelled Behaviour",
          x="W low",
          y="W high") +
-    facet_wrap(~vstates,ncol = 2, labeller = as_labeller(group.names2))
+    facet_wrap(~vstates, ncol = 2, labeller = as_labeller(group.names2))
   
   ggsave(make_title(paste0(directory,"/plt/"),
                     paste0(model,"-",lamb,"_scatterplot-w.png")),
@@ -283,7 +284,7 @@ dive_types <- data.frame(vstate1    = Data$vstates,
 
 rawData <- left_join(rawData,dive_types,by="divenum")
 
-cols_to_plot <- c("Elevation","log_w_total")
+cols_to_plot <- c("Elevation")#,"log_w_total")
 
 rawDataDownLong <- rawData %>%
   pivot_longer(cols = cols_to_plot,
@@ -313,13 +314,16 @@ for (whale in whales_to_keep){
           strip.placement = "outside",
           text = element_text(size=16)) +
     guides(colour = guide_legend(override.aes = list(linewidth=3))) +
-    facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
+    facet_wrap(~feature, ncol = 1, 
+               labeller = as_labeller(labs), scales = "free_y",
+               strip.position = "left")
 
-  ggsave(make_title(paste0(directory,"/plt/"),
-                    paste0(model,"-",
-                           lamb,"-",
-                           holdout_whale,"-",
-                           "profile-",whale,".png")),
+  ggsave(paste0(directory,"/plt/",
+                holdout_whale,"-",
+                "profile-",whale,"-",
+                 model,"-",
+                 lamb,"-",
+                 rand_seed,".png"),
          plot = plot1,
          width = 8,
          height = 4,
@@ -327,7 +331,7 @@ for (whale in whales_to_keep){
          device='png',
          dpi=500)
   
-  plot_known_states = FALSE
+  plot_known_states = TRUE
   if(plot_known_states & model == "no"){
       plot2 <- ggplot(df,aes(x=Time, y=value)) +
         geom_line(aes(color=factor(knownState),
@@ -344,12 +348,14 @@ for (whale in whales_to_keep){
               strip.placement = "outside",
               text = element_text(size=16)) +
         guides(colour = guide_legend(override.aes = list(linewidth=3))) +
-        facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
+        facet_wrap(~feature, ncol = 1, 
+                   labeller = as_labeller(labs), scales = "free_y",
+                   strip.position = "left")
     
-    ggsave(make_title(paste0(directory,"/plt/"),
-                      paste0(model,"-",
-                             holdout_whale,"-",
-                             "profile-",whale,"-known_states.png")),
+    ggsave(paste0(directory,"/plt/",
+                  holdout_whale,"-",
+                  "profile-",whale,
+                  "-known_states.png"),
            plot = plot2,
            width = 8,
            height = 4,

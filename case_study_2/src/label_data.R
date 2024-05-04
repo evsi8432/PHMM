@@ -66,14 +66,17 @@ for(dive in dives){
   neg_dive <- all(dive_df$foraging_signs %in% "none")
   
   if (crunch_dive){
+    print(paste("dive",dive,"is a crunch dive"))
     pos_dives <- c(pos_dives,dive)
     crunch_ind <- (Data_fine$divenum %in% dive) & (Data_fine$crunch %in% T) & (Data_fine$etime > first_crunch_time)
     crunch_ind <- which(crunch_ind)[1]
     Data_fine$knownState[crunch_ind] <- 4
   } else if (pos_dive){
+    print(paste("dive",dive,"is a positive dive"))
     pos_dives <- c(pos_dives,dive)
     Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$etime == tail(dive_df$etime,1))] <- 6
   } else if (neg_dive){
+    print(paste("dive",dive,"is a negative dive"))
     neg_dives <- c(neg_dives,dive)
     Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$etime == tail(dive_df$etime,1))] <- 5
   } else {

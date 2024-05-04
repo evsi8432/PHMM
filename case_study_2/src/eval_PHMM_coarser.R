@@ -65,4 +65,3 @@ for(divenum in test_dives){
 
 probs_PHMM[[k]] <- probs
 AUCs_PHMM[k] <- roc(response = labs, predictor=probs, direction = "<")$auc
-#plot(roc(response = labs, predictor=probs))

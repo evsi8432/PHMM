@@ -3,6 +3,7 @@ library(dplyr)
 library(mclust)
 library(data.table)
 library(ggplot2)
+library(latex2exp)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
@@ -24,13 +25,13 @@ source("../preprocessing/load_data.R")
 ratio <- sum(!(Data$knownState %in% 4)) / nrow(Data)
 ratio <- round(ratio,3)
 models <- list()
-models[[1]] <- c("no",     1.0)
-models[[2]] <- c("random", 1.0)
-models[[3]] <- c("fixed",  0.0)       # no weight
-models[[4]] <- c("fixed",  0.5*ratio) 
-models[[5]] <- c("fixed",  ratio)     # equal weight
-models[[6]] <- c("fixed",  0.5 + 0.5*ratio)
-models[[7]] <- c("fixed",  1.0)       # natural weight
+#models[[1]] <- c("no",     1.0)
+#models[[2]] <- c("random", 1.0)
+models[[1]] <- c("fixed",  0.0)       # no weight
+models[[2]] <- c("fixed",  0.5*ratio) 
+models[[3]] <- c("fixed",  ratio)     # equal weight
+models[[4]] <- c("fixed",  0.5 + 0.5*ratio)
+models[[5]] <- c("fixed",  1.0)       # natural weight
 n_models <- length(models) 
 
 dir.create(directory, showWarnings = FALSE)
@@ -111,7 +112,7 @@ for(model in models){
   se_f <- sum(conf_matrix[ 3, 3]) / sum(conf_matrix[ 3,])
   sp_f <- sum(conf_matrix[-3,-3]) / sum(conf_matrix[-3,])
   
-  df_model <- data.frame(model = rep(paste(model,lamb),6),
+  df_model <- data.frame(model = rep(lamb,6),
                          behaviour = rep(c("Resting","Travelling","Foraging"),each=2),
                          metric = rep(c("Sensitivity","Specificity"),3),
                          value = c(se_r,sp_r,se_t,sp_t,se_f,sp_f))
@@ -125,12 +126,15 @@ plot0 <- ggplot(df,
                     y=value,
                     fill=model)) +
   geom_col(position="dodge") +
+  labs(x = "Behaviour",
+       y = "",
+       fill = TeX("$\\alpha$")) +
   facet_wrap(~metric,ncol=1)
 
 ggsave(make_title(paste0(directory,"/plt/"),
                   "model_comparison.png"),
        plot = plot0,
-       width = 8,
-       height = 8,
+       width = 4,
+       height = 4,
        device='png', 
        dpi=500)

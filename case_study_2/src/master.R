@@ -17,6 +17,7 @@ library(GGally)
 library(signal)
 library(oce)
 library(pROC)
+library(latex2exp)
 
 directory <- "/Users/evsi8432/Documents/Research/PHMM/case_study_2"
 setwd(directory)
@@ -30,8 +31,9 @@ args = commandArgs(trailingOnly=TRUE)
  
 K <- as.numeric(args[1]) # number of cross-validations (one means just do all the data)
 lambda <- as.numeric(args[2]) # lambda for paper
+num_seeds <- as.numeric(args[3])
 
-#K <- 1
+#K <- 4
 #lambda <- 1.0 
 
 print(K)
@@ -92,7 +94,17 @@ for(k in 1:K){
   
   # fit the PHMM
   print("fitting PHMM...")
-  source("src/fit_PHMM_coarser.R")
+  best_hmm <- NULL
+  max_ll <- -Inf
+  for(rand_seed in 1:num_seeds){
+    print(rand_seed)
+    source("src/fit_PHMM_coarser.R")
+    if(-hmm$mod$minimum > max_ll){
+      best_hmm <- hmm
+      max_ll <- -hmm$mod$minimum
+    }
+  }
+  hmm <- best_hmm
   models_PHMM[[k]] <- hmm
 
   # fit baseline

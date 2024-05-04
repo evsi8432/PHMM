@@ -1,6 +1,6 @@
 ### plot results ###
 
-labs <- c(Elevation = "Depth (meters)",
+labs <- c(Elevation = "Depth (m)",
           maxDepth = "Maximum Depth (m)",
           diveDuration = "Dive Duration (s)",
           w_low = "Wiggliness (Low Frequency)",
@@ -9,7 +9,7 @@ labs <- c(Elevation = "Depth (meters)",
           logWHigh = "Wiggliness (High Frequency) (log10)",
           logWTotal = "Wiggliness (Total) (log10)",
           postDiveInt = "Post Dive Interval (s)",
-          htv = "Heading Total Variation (rad)",
+          htv = "Heading Total Variation (rad / s)",
           logHtv = "Heading Total Variation (rad) (log10)",
           logJpNorm = "Jerk Peak (normalized, log10)",
           jp_normed = "Jerk Peak (normalized)",
@@ -44,7 +44,6 @@ plot_dives <- function(dives){
       pivot_longer(cols = cols_to_plot,
                    names_to = "feature")
     
-    
     colors <- hcl(h = seq(15, 375, length = 6 + 1),
                   l = 65, c = 100)[1:6]
     colors <- c("1" = colors[1],
@@ -61,11 +60,10 @@ plot_dives <- function(dives){
       geom_hline(yintercept = 0) +
       geom_vline(aes(xintercept = stime),
                  data = df %>% dplyr::filter(true_label == 4)) +
-      labs(title = paste(df$ID[1],
-                         "label:",title0,
-                         "est prob label:",title1),
+      labs(title = TeX(paste("$\\alpha =", lambda, "$, ",
+                             "$P(X_{s,T_s} \\in \\{4,6\\} \\ | \\ Y_s) =", title1, "$")),
            color="", y="",
-           x="Elapsed time (minutes)") +
+           x="Time (min)") +
       scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
       scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
       scale_color_manual(labels = c("1" = "descent",
@@ -78,7 +76,9 @@ plot_dives <- function(dives){
       theme_classic() +
       theme(strip.background = element_blank(),
             strip.placement = "outside",
-            text = element_text(size=16)) +
+            text = element_text(size=16),
+            legend.position = "none",
+            plot.title = element_text(hjust = 0.5)) +
       facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
     
     ggsave(paste0(directory,"/plt/profile_",
@@ -88,7 +88,7 @@ plot_dives <- function(dives){
                   title0,"_",
                   dive,".png"), 
            plot0, 
-           width = 8, height = 6)
+           width = 6, height = 8)
     print(plot0)
     print(dive)
   }
