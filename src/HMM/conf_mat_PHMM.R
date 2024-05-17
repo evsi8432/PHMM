@@ -182,4 +182,10 @@ write.csv(conf_matrix,
                             holdout_whale,"-",
                             "confusion_matrix.csv")))
 
+write.csv(Data_labeled_small,
+          make_title(paste0(directory,"/params/"),
+                     paste0(model,"-",
+                            lamb,"-",
+                            holdout_whale,"-",
+                            "probs_labs.csv")))
 }

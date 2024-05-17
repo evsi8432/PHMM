@@ -28,7 +28,3 @@ write.csv(AUCs_PHMM,paste0(directory,"/params/AUC_",
                                       paste0(setdiff(names(dist),"knownState"),collapse = "_"),"_",
                                       round(log10(lambda),3),"_",
                                       K,".csv"))
-
-# make plots of AUCs
-
-

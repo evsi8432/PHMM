@@ -31,13 +31,7 @@ args = commandArgs(trailingOnly=TRUE)
  
 K <- as.numeric(args[1]) # number of cross-validations (one means just do all the data)
 lambda <- as.numeric(args[2]) # lambda for paper
-num_seeds <- as.numeric(args[3])
-
-#K <- 4
-#lambda <- 1.0 
-
-print(K)
-print(lambda)
+num_seeds <- as.numeric(args[3]) # number of random seeds
 
 # create directories
 dir.create(directory, showWarnings = FALSE)
@@ -70,7 +64,6 @@ if(plot & load_raw){
 
 # create cross-validation groups
 source("src/make_test_train.R")
-print(pos_dives)
 
 # initialize model lists
 models_base <- list()
@@ -86,39 +79,38 @@ conf_matrices_base <- list()
 conf_matrices_PHMM <- list()
 
 for(k in 1:K){
-
-  print(k)
   
   train_dives <- train_sets[[k]]
   test_dives <- test_sets[[k]]
+  
+  # fit baseline
+  print("fitting baseline...")
+  source("src/fit_base.R") 
+  models_base[[k]] <- base_model
+  
+  # evaluate baseline
+  print("evaluating baseline...")
+  source("src/eval_base.R")  
   
   # fit the PHMM
   print("fitting PHMM...")
   best_hmm <- NULL
   max_ll <- -Inf
   for(rand_seed in 1:num_seeds){
-    print(rand_seed)
+    print(paste("working on fold",k,"of",K,"and seed",rand_seed,"of",num_seeds))
     source("src/fit_PHMM_coarser.R")
     if(-hmm$mod$minimum > max_ll){
       best_hmm <- hmm
       max_ll <- -hmm$mod$minimum
+      print("new best hmm")
     }
   }
   hmm <- best_hmm
   models_PHMM[[k]] <- hmm
 
-  # fit baseline
-  print("fitting baseline...")
-  source("src/fit_base.R") 
-  models_base[[k]] <- base_model
-  
   # evaluate PHMM
   print("evaluating PHMM...")
   source("src/eval_PHMM_coarser.R")
-  
-  # evaluate baseline
-  print("evaluating baseline...")
-  source("src/eval_base.R")  
   
   # plot hmm results
   if(plot){
@@ -134,3 +126,5 @@ print(test_sets)
 print(probs_PHMM)
 source("src/summarize_results.R")
 
+# plot AUCs
+source("src/plot_AUCs.R")

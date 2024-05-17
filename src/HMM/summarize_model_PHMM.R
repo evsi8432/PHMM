@@ -4,6 +4,7 @@ library(mclust)
 library(data.table)
 library(ggplot2)
 library(latex2exp)
+library(pROC)
 
 #setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
@@ -83,20 +84,33 @@ for(model in models){
   
   # get conf matrix for each whale
   conf_matrix <- matrix(rep(0,3*3),nrow=3,ncol=3)
-    
-  for(holdout_whale in whales){
   
+  # get foraging ROC values
+  df_ROC_model <- data.frame(prob_resting = c(),
+                             prob_travelling = c(),
+                             prob_foraging = c(),
+                             knownState = c())
+  
+  for(holdout_whale in whales){
+    
     conf_matrix_whale <- read.csv(make_title(paste0(directory,"/params/"),
                                              paste0(model,"-",
                                                     lamb,"-",
                                                     holdout_whale,"-",
                                                     "confusion_matrix.csv")))
-    
-    
-    print(conf_matrix_whale)
     conf_matrix <- conf_matrix + conf_matrix_whale[1:3,2:4]
+    
+    df_ROC_model_whale <- data.frame(fread(make_title(paste0(directory,"/params/"),
+                                            paste0(model,"-",
+                                                   lamb,"-",
+                                                   holdout_whale,"-",
+                                                   "probs_labs.csv"))))[,-1]
+    if(df_ROC_model_whale[1,1] != "prob_resting"){
+      df_ROC_model <- rbind(df_ROC_model,df_ROC_model_whale)
+    }
   }
   
+  # make model confusion matrix
   rownames(conf_matrix) <- c("True Resting", "True Travelling", "True Foraging")
   colnames(conf_matrix) <- c("Predicted Resting", "Predicted Travelling", "Predicted Foraging")
   
@@ -105,6 +119,7 @@ for(model in models){
                                           lamb,"-",
                                           "confusion_matrix_all.csv")))
   
+  # make sensitivity specificity and ROC dataframe
   se_r <- sum(conf_matrix[ 1, 1]) / sum(conf_matrix[ 1,])
   sp_r <- sum(conf_matrix[-1,-1]) / sum(conf_matrix[-1,])
   se_t <- sum(conf_matrix[ 2, 2]) / sum(conf_matrix[ 2,])
@@ -112,24 +127,34 @@ for(model in models){
   se_f <- sum(conf_matrix[ 3, 3]) / sum(conf_matrix[ 3,])
   sp_f <- sum(conf_matrix[-3,-3]) / sum(conf_matrix[-3,])
   
-  df_model <- data.frame(model = rep(lamb,6),
-                         behaviour = rep(c("Resting","Travelling","Foraging"),each=2),
-                         metric = rep(c("Sensitivity","Specificity"),3),
-                         value = c(se_r,sp_r,se_t,sp_t,se_f,sp_f))
+  ROC_r = roc(response  = df_ROC_model$knownState %in% 1, 
+              predictor = df_ROC_model$prob_resting, 
+              direction = "<")$auc
+  ROC_t = roc(response  = df_ROC_model$knownState %in% 2, 
+              predictor = df_ROC_model$prob_travelling, 
+              direction = "<")$auc
+  ROC_f = roc(response  = df_ROC_model$knownState %in% 3, 
+              predictor = df_ROC_model$prob_foraging, 
+              direction = "<")$auc
+  
+  df_model <- data.frame(model = rep(lamb,9),
+                         behaviour = rep(c("Resting","Travelling","Foraging"),each=3),
+                         metric = rep(c("Sensitivity","Specificity","AUC"),3),
+                         value = c(se_r,sp_r,ROC_r,se_t,sp_t,ROC_t,se_f,sp_f,ROC_f))
   
   df <- rbind(df,df_model)
-
 }
 
-plot0 <- ggplot(df,
+plot0 <- ggplot(df[df$model %in% c("0","0.049","1"),],
                 aes(x=behaviour,
                     y=value,
                     fill=model)) +
   geom_col(position="dodge") +
-  labs(x = "Behaviour",
+  scale_fill_grey(start = 0.8, end = 0.2) +#brewer(palette="Set2") +
+  labs(x = "Dive Type",
        y = "",
        fill = TeX("$\\alpha$")) +
-  facet_wrap(~metric,ncol=1)
+  facet_wrap(~metric,ncol=1,scales = "free")
 
 ggsave(make_title(paste0(directory,"/plt/"),
                   "model_comparison.png"),

@@ -60,26 +60,57 @@ for(dive in dives){
   first_crunch_time <- max(dive_df$etime[dive_df$ad > 0.7*max(dive_df$ad)]) - 30
   last_crunch_time <- max(dive_df$etime[dive_df$ad > 0.7*max(dive_df$ad)])
   
+  # label first observation as descent
+  Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$stime == dive_df$stime[1])] <- 1
+  
   # label dive
-  pos_dive <- any(dive_df$crunch & dive_df$etime > first_crunch_time, na.rm=T) & !(dive %in% c(3957))
+  pos_dive <- any((dive_df$crunch | dive_df$foraging) & dive_df$etime > first_crunch_time, na.rm=T) & !(dive %in% c(3957))
   crunch_dive <- pos_dive & any(dive_df$crunch & dive_df$etime < last_crunch_time, na.rm=T)
   neg_dive <- all(dive_df$foraging_signs %in% "none")
   
   if (crunch_dive){
-    print(paste("dive",dive,"is a crunch dive"))
     pos_dives <- c(pos_dives,dive)
     crunch_ind <- (Data_fine$divenum %in% dive) & (Data_fine$crunch %in% T) & (Data_fine$etime > first_crunch_time)
     crunch_ind <- which(crunch_ind)[1]
+    
     Data_fine$knownState[crunch_ind] <- 4
+    Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$etime == tail(dive_df$etime,1))] <- 6
   } else if (pos_dive){
-    print(paste("dive",dive,"is a positive dive"))
     pos_dives <- c(pos_dives,dive)
     Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$etime == tail(dive_df$etime,1))] <- 6
   } else if (neg_dive){
-    print(paste("dive",dive,"is a negative dive"))
     neg_dives <- c(neg_dives,dive)
     Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$etime == tail(dive_df$etime,1))] <- 5
   } else {
     na_dives <- c(na_dives,dive)
+  }
+}
+
+for(dive in c(3957,3161,pos_dives)){
+  
+  dive_df <- Data_fine[Data_fine$divenum %in% dive,]
+  if(T){
+    print(dive)
+    dive_df$elev <- -dive_df$ad
+    plot0 <- ggplot(dive_df, aes(x = stime, y = -ad)) +
+      geom_line() + 
+      labs(title = paste0("Whale: ",dive_df$ID[1],
+                          "    Date: ",substr(dive_df$stime[1],1,10),
+                          "    TDR dive number: ",dive_df$TDR.dive.no[1])) + 
+      geom_hline(yintercept = 0) +
+      geom_vline(aes(xintercept = stime),
+                 data = dive_df %>% dplyr::filter(crunch %in% T),
+                 color = "red") + 
+      geom_vline(aes(xintercept = stime),
+                 data = dive_df %>% dplyr::filter(echo.rapid %in% T),
+                 color = "black")
+    
+    print(plot0)
+    
+    ggsave(paste0(dive_df$ID[1],"_",
+                  dive_df$TDR.dive.no[1],
+                  ".png"), 
+           plot0, 
+           width = 4, height = 4)
   }
 }

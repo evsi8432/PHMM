@@ -53,10 +53,20 @@ plot_dives <- function(dives){
                 "5" = colors[5],
                 "6" = colors[6])
     
+    if(lambda == 1.0){
+      legend.pos <- "right"
+      wid <- 8
+    } else {
+      legend.pos <- "none"
+      wid <- 6
+    }
+    
     plot0 <- ggplot(df_long,aes(x=stime, y=value)) +
       geom_line() +
       geom_point(aes(color=factor(viterbi,levels=1:6),
-                     group=divenum)) +
+                     group=divenum,
+                     shape=viterbi==4),
+                 size = 4) +
       geom_hline(yintercept = 0) +
       geom_vline(aes(xintercept = stime),
                  data = df %>% dplyr::filter(true_label == 4)) +
@@ -66,18 +76,21 @@ plot_dives <- function(dives){
            x="Time (min)") +
       scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
       scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
-      scale_color_manual(labels = c("1" = "descent",
+      scale_color_manual(limits = c("1","2","3","4","5","6"),
+                         labels = c("1" = "descent",
                                     "2" = "bottom",
                                     "3" = "chase",
                                     "4" = "capture",
                                     "5" = "ascent w/o fish",
                                     "6" = "ascent w/ fish"),
                          values = colors) +
+      scale_shape_manual(values = c(19,8),
+                         guide = "none") +
       theme_classic() +
       theme(strip.background = element_blank(),
             strip.placement = "outside",
             text = element_text(size=16),
-            legend.position = "none",
+            legend.position = legend.pos,
             plot.title = element_text(hjust = 0.5)) +
       facet_wrap(~feature, ncol = 1, labeller = as_labeller(labs), scales = "free_y")
     
@@ -88,7 +101,7 @@ plot_dives <- function(dives){
                   title0,"_",
                   dive,".png"), 
            plot0, 
-           width = 6, height = 8)
+           width = wid, height = 8)
     print(plot0)
     print(dive)
   }
