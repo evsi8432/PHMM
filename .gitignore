@@ -7,3 +7,8 @@ archive/
 src/archive/
 *.ipynb
 *.RData*
+
+*.png
+*.rds
+*.pdf
+*.csv

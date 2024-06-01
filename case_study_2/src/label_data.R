@@ -64,7 +64,7 @@ for(dive in dives){
   Data_fine$knownState[(Data_fine$divenum %in% dive) & (Data_fine$stime == dive_df$stime[1])] <- 1
   
   # label dive
-  pos_dive <- any((dive_df$crunch | dive_df$foraging) & dive_df$etime > first_crunch_time, na.rm=T) & !(dive %in% c(3957))
+  pos_dive <- any((dive_df$crunch | dive_df$foraging) & dive_df$etime > first_crunch_time, na.rm=T) & !(dive %in% c(3161,3957))
   crunch_dive <- pos_dive & any(dive_df$crunch & dive_df$etime < last_crunch_time, na.rm=T)
   neg_dive <- all(dive_df$foraging_signs %in% "none")
   
@@ -86,7 +86,7 @@ for(dive in dives){
   }
 }
 
-for(dive in c(3957,3161,pos_dives)){
+for(dive in c(3957,pos_dives)){
   
   dive_df <- Data_fine[Data_fine$divenum %in% dive,]
   if(T){

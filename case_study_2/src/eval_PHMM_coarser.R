@@ -1,5 +1,8 @@
-Data_less_fine_unlabelled <- prepData(Data_less_fine_final[Data_less_fine_final$divenum %in% test_dives,
-                                      c("ID","divenum","stime","ad",names(dist),"knownState")],
+#Data_less_fine_unlabelled <- prepData(Data_less_fine_final[Data_less_fine_final$divenum %in% test_dives,
+#                                      c("ID","divenum","stime","ad",names(dist),"knownState")],
+#                            coordNames=NULL)
+
+Data_less_fine_unlabelled <- prepData(Data_less_fine_final[,c("ID","divenum","stime","ad",names(dist),"knownState")],
                             coordNames=NULL)
 
 Data_less_fine_unlabelled$true_label <- Data_less_fine_unlabelled$knownState
@@ -7,29 +10,15 @@ Data_less_fine_unlabelled$knownState <- 7
 
 Par0 <- getPar0(hmm)
 
-if(lambda == -1){
-  hmm0 <- fitHMM(data=Data_less_fine_unlabelled,
-                 nbStates=N,
-                 dist=hmm$conditions$dist,
-                 fixPar=list(knownState = hmm$conditions$fixPar$knownState),
-                 DM=hmm$conditions$DM,
-                 beta0=Par0$beta,
-                 delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
-                 Par0=Par0$Par,
-                 nlmPar = list('stepmax'=1e-100,
-                               'iterlim'=1))
-} else {
-  hmm0 <- fitHMM(data=Data_less_fine_unlabelled,
-                 nbStates=N,
-                 dist=hmm$conditions$dist,
-                 DM=hmm$conditions$DM,
-                 beta0=Par0$beta,
-                 delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
-                 Par0=Par0$Par,
-                 nlmPar = list('stepmax'=1e-100,
-                               'iterlim'=1))
-}
-
+hmm0 <- fitHMM(data=Data_less_fine_unlabelled,
+               nbStates=N,
+               dist=hmm$conditions$dist,
+               DM=hmm$conditions$DM,
+               beta0=Par0$beta,
+               delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
+               Par0=Par0$Par,
+               nlmPar = list('stepmax'=1e-100,
+                             'iterlim'=1))
 
 Data_less_fine_unlabelled$viterbi <- viterbi(hmm0)
 Data_less_fine_unlabelled$p_catch <- stateProbs(hmm0)[,4]

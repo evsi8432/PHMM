@@ -5,7 +5,6 @@ AUCs <- c()
 
 param_directory <- "params"#"params_unshared_label_1"
 plt_directory <- "plt"#"plt_unshared_label_1"
-K <- "4"
 
 # load in base AUCS
 filename <- paste0(param_directory,"/AUC_base_",K,".csv")
