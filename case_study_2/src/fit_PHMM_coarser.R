@@ -26,9 +26,9 @@ dist[["jp_normed"]] <- "gamma"
 DM <- list()
 for(feature in names(dist)){
   if(feature %in% c("delt_d")){
-    #DM0 <- kronecker(diag(2),
-    #                 rbind(diag((N-1)),c(rep(0,(N-2)),1)))
-    DM0 <- diag(2*N)
+    DM0 <- kronecker(diag(2),
+                     rbind(diag((N-1)),c(rep(0,(N-2)),1)))
+    #DM0 <- diag(2*N)
   } else if (feature == "knownState") {
     DM0 <- diag(N^2)
   } else if(dist[[feature]] %in% c("norm","gamma")){
@@ -36,11 +36,11 @@ for(feature in names(dist)){
     #                 rbind(c(1,0,0),diag(3),c(1,0,0),c(1,0,0)))
     DM0 <- kronecker(diag(2),
                      rbind(diag((N-1)),c(rep(0,(N-2)),1)))
-    DM0 <- diag(2*N)
+    #DM0 <- diag(2*N)
   } else if (dist[[feature]] == "vm"){
     #DM0 <- rbind(c(1,0,0),diag(3),c(1,0,0),c(1,0,0))
-    #DM0 <- rbind(diag((N-1)),c(rep(0,(N-2)),1))
-    DM0 <- diag(N)
+    DM0 <- rbind(diag((N-1)),c(rep(0,(N-2)),1))
+    #DM0 <- diag(N)
   } 
   DM[[feature]] <- DM0
 }
@@ -50,10 +50,10 @@ fixPar <- list()
 
 eps <- 1e-50
 
-#fixPar$delt_d <- c(NA, 0, 0, 0,NA, # means each state
-#                   NA,NA,NA,NA,NA) # sds each state
-fixPar$delt_d <- c(NA, 0, 0, 0,NA,NA, # means each state
-                   NA,NA,NA,NA,NA,NA) # sds each state
+fixPar$delt_d <- c(NA, 0, 0, 0,NA, # means each state
+                   NA,NA,NA,NA,NA) # sds each state
+#fixPar$delt_d <- c(NA, 0, 0, 0,NA,NA, # means each state
+#                   NA,NA,NA,NA,NA,NA) # sds each state
 
 # fix beta
 fixPar$beta <- c(       NA,-1e2,-1e2,  NA,-1e2,  # descent
@@ -74,28 +74,28 @@ if(rand_seed == 1){
 
 # set initial parameters
 Par0 <- list()
-#Par0[["delt_d"]] <- c(c(5,  0,  0,  0,-5) + rnorm(5, sd = c(2*sig,0,0,0,2*sig)), # means
-#                  log(c(5,2.0,2.0,2.0,5)) + rnorm(5, sd = 0.5)) # sds
-Par0[["delt_d"]] <- c(c(5,  0,  0,  0,-5,-5)  + rnorm(6, sd = c(2*sig,0,0,0,2*sig,2*sig)), # means
-                  log(c(5,2.0,2.0,2.0, 5, 5)) + rnorm(6, sd = 0.5)) # sds
+Par0[["delt_d"]] <- c(c(5,  0,  0,  0,-5) + rnorm(5, sd = c(2*sig,0,0,0,2*sig)), # means
+                  log(c(5,2.0,2.0,2.0,5)) + rnorm(5, sd = 0.5)) # sds
+#Par0[["delt_d"]] <- c(c(5,  0,  0,  0,-5,-5)  + rnorm(6, sd = c(2*sig,0,0,0,2*sig,2*sig)), # means
+#                  log(c(5,2.0,2.0,2.0, 5, 5)) + rnorm(6, sd = 0.5)) # sds
 
 #Par0[["htv"]] <- c(log(c(0.2,0.5,2.0)) + rnorm(3, sd = 0.5*sig), # means
 #                   log(c(0.1,0.4,0.5)) + rnorm(3, sd = 0.5*sig)) # sds
-#Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,1.0,0.2)) + rnorm(5, sd = 0.5*sig), # means
-#                   log(c(0.1,0.1,0.4,1.0,0.1)) + rnorm(5, sd = 0.5*sig)) # sds
-Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,1.0,0.2,0.2)) + rnorm(6, sd = 0.5*sig), # means
-                   log(c(0.1,0.1,0.4,1.0,0.1,0.1)) + rnorm(6, sd = 0.5*sig)) # sds
+Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,1.0,0.2)) + rnorm(5, sd = 0.5*sig), # means
+                   log(c(0.1,0.1,0.4,1.0,0.1)) + rnorm(5, sd = 0.5*sig)) # sds
+#Par0[["htv"]] <- c(log(c(0.2,0.2,0.5,1.0,0.2,0.2)) + rnorm(6, sd = 0.5*sig), # means
+#                   log(c(0.1,0.1,0.4,1.0,0.1,0.1)) + rnorm(6, sd = 0.5*sig)) # sds
 
 #Par0[["rajp"]] <- c(log(c(2, 1, 0.1)) + rnorm(3, sd = 0.5*sig))  # concentrations
-#Par0[["rajp"]] <- c(log(c(2, 2, 1, 0.1, 2)) + rnorm(5, sd = 0.5*sig))   # concentrations
-Par0[["rajp"]] <- c(log(c(2, 2, 1, 0.1, 2, 2)) + rnorm(6, sd = 0.5*sig))   # concentrations
+Par0[["rajp"]] <- c(log(c(2, 2, 1, 0.1, 2)) + rnorm(5, sd = 0.5*sig))   # concentrations
+#Par0[["rajp"]] <- c(log(c(2, 2, 1, 0.1, 2, 2)) + rnorm(6, sd = 0.5*sig))   # concentrations
 
 #Par0[["jp_normed"]] <- c(log(c(3,5,25)) + rnorm(3, sd = 0.5*sig), # means
 #                         log(c(2,15,5)) + rnorm(3, sd = 0.5*sig)) # sds
-#Par0[["jp_normed"]] <- c(log(c(10,5,10,15,10)) + rnorm(5, sd = 0.5*sig), # means
-#                         log(c(10,5,10,15,10)) + rnorm(5, sd = 0.5*sig)) # sds
-Par0[["jp_normed"]] <- c(log(c(10,5,10,15,10,10)) + rnorm(6, sd = 0.5*sig), # means
-                         log(c(10,5,10,15,10,10)) + rnorm(6, sd = 0.5*sig)) # sds
+Par0[["jp_normed"]] <- c(log(c(10,5,10,15,10)) + rnorm(5, sd = 0.5*sig), # means
+                         log(c(10,5,10,15,10)) + rnorm(5, sd = 0.5*sig)) # sds
+#Par0[["jp_normed"]] <- c(log(c(10,5,10,15,10,10)) + rnorm(6, sd = 0.5*sig), # means
+#                         log(c(10,5,10,15,10,10)) + rnorm(6, sd = 0.5*sig)) # sds
 
 # pick initial beta
 beta0  <- c(       -2 + 1*sig*rnorm(1),-1e2,-1e2,  -2 + 1*sig*rnorm(1),-1e2,  # descent
@@ -118,7 +118,7 @@ Data_fine_final <- prepData(Data_fine[Data_fine$divenum %in% c(train_dives,test_
 
 # turn Data_fine into 10 second windows
 
-window_size <- 10 # seconds- must be multiple of 2
+window_size <- 2 # seconds- must be multiple of 2
 n <- window_size / 2
 
 knownStates <- c()

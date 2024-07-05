@@ -17,6 +17,7 @@ hmm0 <- fitHMM(data=Data_less_fine_unlabelled,
                beta0=Par0$beta,
                delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
                Par0=Par0$Par,
+               stateNames = hmm$stateNames,
                nlmPar = list('stepmax'=1e-100,
                              'iterlim'=1))
 

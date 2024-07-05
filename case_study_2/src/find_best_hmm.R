@@ -30,7 +30,7 @@ load_raw <- F # whether to load raw Data from scratch
 args = commandArgs(trailingOnly=TRUE)
 
 K <- 1 # number of cross-validations (one means just do all the data)
-lambda <- 0.0001 # lambda for paper
+lambda <- 0.01 # lambda for paper
 num_seeds <- 10 # number of random seeds
 
 # set distributions
