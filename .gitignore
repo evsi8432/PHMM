@@ -12,3 +12,11 @@ src/archive/
 *.rds
 *.pdf
 *.csv
+
+momentuHMM/.Rproj.user
+momentuHMM/.Rhistory
+momentuHMM/.RData
+momentuHMM/.Ruserdata
+momentuHMM/src/*.o
+momentuHMM/src/*.so
+momentuHMM/src/*.dll
