@@ -1,0 +1,90 @@
+
+\subsubsection{Fixed labels}
+
+Previous studies \citep{McClintock:2018,Li:2021} incorporate labels into HMMs using an approach that is equivalent to a specific instance of the PHMM. In particular, define some non-random set of observation times as $\calT$. Then, the studies above implicitly use a time-varying probability mass for $L_t$ which we denote as $f_{\ell,t}^{(i)}(\ell_t)$, where
+%
+\begin{gather}
+    f_{\ell,t}^{(i)}(\ell_t) = \begin{cases} 1, & t \in \calT, \enspace \ell_t = i, \\ 
+    %
+    1, & t \notin \calT, \enspace \ell_t = \emptyset, \\ 
+    %
+    0, & \text{otherwise}. \end{cases} \label{eqn:PHMM_emis_niave}
+\end{gather}
+%
+In words, these studies assume that the probability of observing a label is either $1$ or $0$, and these probabilities are predefined by some known set $\calT$.
+
+\subsubsection{Random labels}
+
+However, in many situations the act of observing a label itself may be a random event that depends upon either the observation $Z_t$ or the hidden state $X_t$. As an example to motivate the inclusion of random labels, consider an HMM used to model the behaviour of a predator. Assume that there are two behavioural states (resting and hunting), where $X_t = 1$ corresponds to resting and $X_t = 2$ corresponds to hunting. Further, suppose that researchers can observe successful prey captures via a crunching sound that is registered on an acoustic recorder when the animal is hunting. Given that the predator is hunting, denote the probability of observing a crunching sound on the acoustic recorder as $p$. Labels are never observed when the animal is resting ($X_t = 1$), so $f^{(1)}(\ell_t = \emptyset \mid z_t) = 1$ for all observations $z_t$. However, a label is observed with probability $p$ if the animal is hunting ($X_t = 2$), so $f^{(2)}(\ell_t = 2 \mid z_t) = p$ and $f^{(2)}(\ell_t = \emptyset \mid z_t) = 1-p$. In this way, the existence of a label itself may provide information that can be included within a PHMM to improve parameter estimates.
+
+In addition, it is reasonable to assume that the predator may be more likely to catch its prey when it is running faster, so $f^{(2)}(\ell_t = 2 \mid z_t)$ may be modelled as an increasing function of $z_t$. %(say, $f^{(2)}(\ell_t = \emptyset \mid z_t) = 1-\text{expit}(z_t)$). 
+In this way, the probability of observing a label depends upon both the hidden behavioural state $X_t$ and the underlying observation $Z_t$.
+
+Further, suppose that, while an animal is resting, it bumps into a rock with a sound identical to a crunch of prey with probability $q$. In this case, there is a nonzero probability of mislabelling a resting state as foraging, so $f^{(1)}(\ell_t = 2 \mid z_t) = q$ and $f^{(1)}(\ell_t = \emptyset \mid z_t) = 1-q$.
+
+In the theorem below, we show that the parameter estimates themselves do not change if the probability of observing a label depends \textit{only} on the observation $z_t$ and not the underlying state $X_t$.
+
+\begin{theorem}
+
+    The maximum likelihood estimate and observed fisher information for both models are equal.
+
+\end{theorem}
+
+I argue that this formulation may miss important information if the probability of observing a label is a function of $X_t$ and/or $Y_t$. By explicitly modelling the probability of getting a label from an observation, we treat the presence or absence of a label itself as important information that can be used to model animal movement more accurately.
+
+\iffalse 
+
+\section{Conclusion}
+
+In this paper, we introduced a novel approach to address the challenges of sparse labeling in hidden Markov models (HMMs) within ecological contexts. Our method, weighted semi-supervised learning in HMMs, extends the weighted likelihood approach from mixture models to HMMs, allowing practitioners to balance the influence of sparse labels within the time series data.
+
+Our approach offers several advantages over traditional HMMs, particularly in ecological studies where labeled data can be scarce or expensive to obtain. By incorporating weights into the likelihood function, our method effectively balances the impact of labeled and unlabeled data during parameter estimation without relying on imputing hidden labels. This not only improves the accuracy of model inference but also enhances the interpretability of the resulting models.
+
+Through two case studies, we demonstrated the effectiveness of our approach, showcasing higher cross-validated accuracy compared to traditional HMMs. These results highlight the practical utility of our method in addressing label sparsity and model misspecification, particularly in ecological studies where data collection can be challenging.
+
+Our work contributes to the advancement of statistical methods in ecological modeling by providing a practical solution to handle sparse labeling in HMMs. By leveraging both labeled and unlabeled data effectively, our approach has the potential to improve the accuracy and interpretability of HMMs in ecological research and conservation efforts.
+
+In future research, we plan to explore further extensions and applications of our method, including its integration with other modeling frameworks and its scalability to larger and more complex datasets. Additionally, we aim to conduct comparative studies to evaluate the performance of our approach against other semi-supervised learning techniques in ecological contexts.
+
+Overall, our method represents a valuable contribution to the field of ecological modeling, offering a powerful tool for researchers to better understand and conserve animal behavior in natural ecosystems.
+
+
+% \Section{Further Work}
+
+I will fit three different classes of hidden Markov models to both real-world and simulated data sets:
+
+\begin{enumerate}
+    \item Traditional HMMs without labels,
+    \item PHMMs which model labels as fixed
+    \item PHMMs which incorporate labels into the model's emission distributions.
+\end{enumerate}
+
+%\subsection{Simulation Study}
+
+I will conduct a simulation study to understand how the parameter estimate error, hidden-state decoding accuracy, and the optimal value of $\lambda$ (i.e. the weighting of labelled vs unlabelled data) depends upon the model structure and degree of model misspecification. I will simulate data from a variety of models with different sequence lengths ($T$), numbers of hidden states ($N$), and label observation probabilities $\left(f^{(i)}(x_t\ell_t|y_t)\right)$. I will also adjust the parameters and structure of the generating PHMM to match the HMM that was estimated in the results section of chapter 2. I will introduce model misspecification by simulating data from HMMs with more hidden states and/or heavily-tailed emission distributions compared to the model used for inference. Finally, I will use many different likelihood weighting terms ($\lambda$) to fit each misspecified model.
+
+\begin{enumerate}
+    \item Label observation depends on emission
+    \item possibility of mislabelling
+    \item label observation depends on hidden state
+    \item label observation depends on covariate
+    \item label is one of two behaviours
+    \item interested in rare events
+    \item use labels to define initial values
+    \item prove that likelihood is equivalent for labels as observations.
+\end{enumerate}
+
+I will use several metrics to evaluate each model's performance. In addition to reporting the bias of each parameter estimate, I will estimate several distances between the estimated HMMs and the generating HMM, including the Wasserstein metric \citep{Chen:2020} and the KL divergence \citep{Kullback:1951}. I will report the average decoding accuracy for each model, and plot sequences of simulated data along with the hidden states estimated by each model. This is similar to the simulation study from chapter 2.
+
+%\subsection{Case Study}
+
+Finally, I will fit a variety of PHMMs to the kinematic data of killer whales off the coast of British Columbia. This case study will asses whether semi-supervised HMMs can produce better-fitting and more realistic models for real-world movement data. I will vary the number of hidden states $N$ and the likelihood weighting parameter $\lambda$ to create several candidate models. I then will fit all of these candidate models to the sparsely labelled killer whale kinematic data set introduced in Section \ref{sec:w_like_ss}. 
+
+To quantitatively evaluate each candidate model, I will using k-fold cross-validation with two different loss functions: (1) The likelihood of each validation set \citep{Celeux:2008}, and (2) the estimated probability that each labelled hidden state is equal to its true (held-out) label. To qualitatively evaluate each model, I will report pseudoresiduals, empirical histograms, and the estimated hidden states of selected dives from the case study. This is similar to the case study from chapter 2.
+
+\begin{enumerate}
+    \item use labels of behaviours (possibility of mislabel)
+    \item use labels of successful foraging events (need to find those)
+\end{enumerate}
+
+\fi

@@ -5,8 +5,9 @@
 \input{defs}
 
 \usepackage{appendix}
+\usepackage{blkarray}
 
-\title{The Partially Hidden Markov Model: Incorporating Random Labels in Biologging Studies}
+\title{The Partially Hidden Markov Model: Incorporating Sparse Labels in Biologging Studies with Weighted Likelihoods}
 
 \author{
   \textbf{Evan Sidrow} \\
@@ -54,36 +55,44 @@
 \label{sec:intro}
 \input sections/intro.tex
 
-\section{Model formuation}
+\section{Background}
+\label{sec:background}
+\input sections/background.tex
+
+\section{Weighted Likelihood for Semi-Supervised Learning in Hidden Markov Models}
 \label{sec:model}
 \input sections/model.tex
 
-\section{Simulation Study}
-\label{sec:sim}
-\input sections/sim_study.tex
+%\section{Simulation Study}
+%\label{sec:sim}
+%\input sections/sim_study.tex
 
-\section{Case Study}
+\section{Case Studies}
 \label{sec:case}
-\input sections/case_study.tex
+\input sections/case_study_1.tex
+\input sections/case_study_2.tex
 
-\section{Further Work}
-\label{sec:fut_ss}
-\input sections/future_work.tex
+\section{Discussion}
+\label{sec:discussion}
+\input sections/discussion.tex
 
 \section*{ACKNOWLEDGEMENTS}
 The killer whale data were collected under University of British Columbia Animal Care Permit number A19-0053 and Fisheries and Oceans Canada Marine Mammal Scientific License for Whale Research number XMMS 6 2019.
 This research was enabled in part by support provided by WestGrid (www.westgrid.ca) and Compute Canada (www.computecanada.ca).
-I acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC) as well as the support of Fisheries and Oceans Canada (DFO). 
-I thank the University of British Columbia and the Four-Year Doctoral Fellowship program.
-%
+We acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC) as well as the support of Fisheries and Oceans Canada (DFO). 
+We thank the University of British Columbia and the Four-Year Doctoral Fellowship program.
+We acknowledge the Canadian Statistical Sciences Institute (CANSSI) for its support.
+We appreciate the support of the Canada Research Chairs program.
+We acknowledge support from the BC Knowledge Development Fund.
+We thank Canada Foundation for Innovation for its support.
 \newpage
 \bibliography{references}
 %
 
-\begin{appendix}
+%\begin{appendix}
 
-\input sections/appendix.tex
+%\input sections/appendix.tex
 
-\end{appendix}
+%\end{appendix}
 
 \end{document}
