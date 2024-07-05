@@ -1,1 +1,63 @@
-\section{Proof of Theorem 1}
+\newpage
+
+- put Tennessen definitions of a dive here
+- add figure with AUC for all alphas for case study 1 here.
+
+\section{Appendix: details for case study 1}
+
+%Given dive $t$ was type $i \in \{1,2,3\}$, we assumed that $Y_{s,t}$ followed a two-dimensional normal distribution with mean $\bfmu^{(i)}$ and covariance matrix $\bfSigma^{(i)}$ for all $s$ and $t$. Again, the parameters $\{\bfmu^{(i)},\bfSigma^{(i)}\}$ are shared between whales.
+
+\section{Appendix: details for case study 2}
+
+
+\section{Appendix: Additional Dive Profiles of Killer Whale Foraging}
+
+The following pages contain additional plots of killer whale dive profiles. Figure \ref{fig:profiles_5566} is of a dive that is confirmed to have no foraging and figure \ref{fig:profiles_4281} is of a dive that is confirmed to contain a prey capture.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-4_4_neg_5566.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.0001$ (down-weighting unlabelled observations).}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-2_4_neg_5566.png}
+        \caption{Decoded dive for PHMM with $\alpha = 0.01$ (down-weighting unlabelled observations).}
+    \end{subfigure}
+    \\
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_0_4_neg_5566.png}
+        \caption{Decoded dives for PHMM with $\alpha = 1$ (the ``natural" weighting).}
+    \end{subfigure}
+    \caption{Dive profiles, observations, and the decoded probability that each window is the ``catch" state for a selected dive that is confirmed to have no foraging and PHMMs with $\alpha \in \{0.0001,0.01,1\}$. Observations are coloured according to the most-likely sequence of hidden states as determined by the Viterbi algorithm. The window associated with the true prey capture label is denoted by a vertical black line. The estimated probability that the entire dive is a successful foraging dive is shown in the title of each subfigure.}
+    \label{fig:profiles_5566}
+\end{figure}
+
+
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-4_4_pos_4281.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.0001$ (down-weighting unlabelled observations).}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-2_4_pos_4281.png}
+        \caption{Decoded dive for PHMM with $\alpha = 0.01$ (down-weighting unlabelled observations).}
+    \end{subfigure}
+    \\
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_0_4_pos_4281.png}
+        \caption{Decoded dives for PHMM with $\alpha = 1$ (the ``natural" weighting).}
+    \end{subfigure}
+    \caption{Dive profiles, observations, and the decoded probability that each window is the ``catch" state for a selected successful foraging dive and PHMMs with $\alpha \in \{0.0001,0.01,1\}$. Observations are coloured according to the most-likely sequence of hidden states as determined by the Viterbi algorithm. The window associated with the true prey capture label is denoted by a vertical black line. The estimated probability that the entire dive is a successful foraging dive is shown in the title of each subfigure.}
+    \label{fig:profiles_4281}
+\end{figure}

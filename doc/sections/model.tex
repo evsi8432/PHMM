@@ -1,75 +1,52 @@
 %\section{Model formulation}
 
-We begin by introducing new notation to describe labels as observations within an HMM. If labels are modelled as observations, then it is straightforward to model how observing a label at time $t$ can depend upon both the hidden state $X_t$ and the observation $Y_t$.
-
-Suppose that an observation $Y_t$ can be decomposed into an underlying observation $Z_t$ as well as a \textit{label} $L_t \in \{\emptyset,1,\ldots,N\}$ such that $Y_t = \{Z_t,L_t\}$. We denote a realization of $Y_t$ as $y_t = \{z_t,\ell_t\}$.
+In this section, I outline the primary contribution of this work and develop a weighted likelihood approach for semi-supervised learning in HMMs. %The primary issue is that the likelihood in Equation (\ref{eqn:HMM_like_marginal}) is a product of matrices, so raising individual terms to a particular power is not straightforward. In this section, I address this issue in three steps. First, I write down the likelihood of a partially observed HMM. Next, I reparameterize and rescale the weighted likelihood from Equation (\ref{eqn:like_partial}). Finally, I use that re-parameterized and re-scaled likelihood to introduce a novel 
+I begin by writing down the likelihood of a partially observed HMM. I use the same notation from Section 2.2, namely random labels $\bfZ = \{Z_t\}_{t \in \calT}$, where $Z_t$ is generated from hidden state $X_t$ and, conditioned on $\bfX$, $\bfY$, and $\bfZ \setminus \{Z_t\}$, depends only on $X_t$. As before, a fixed realization of $\bfZ$ is denoted as $\bfz = \{z_t\}_{t \in \calT}$, and I abuse notation by setting $z_t = \emptyset$ for all unlabelled observations (i.e., $t \notin \calT$) and $g^{(i)}(\emptyset ; \beta^{(i)}) = 1$. The HMM likelihood for observations $\bfy$ and labels $\bfz$ is thus
 %
-%\begin{equation*}
-%    L_t := \begin{cases} X_t, & X_t\text{ is observed} \\ \emptyset, & \text{otherwise} \end{cases}.
-%\end{equation*}
-%
-%The label $L_t$ is itself an observation from the HMM, just like $Y_t$. As such, we define the \textit{augmented} observation at time $t$ as
-%
-%\begin{equation*}
-%    \Ya_t := (Y_t, L_t), \qquad
-%    \ya_t := (y_t, \ell_t),
-%\end{equation*}
-%
-%where $\Ya_t$ is a random variable and $\ya_t$ is a realization of that random variable. In this way, one may simply specify an HMM so that the hidden states are $X = \{X_1,\ldots,X_T\}$ and the observations are $\Ya = \{\Ya_1,\ldots,\Ya_T\}$. An HMM defined in this way obeys the standard assumption that the set of observations $\{\Ya_1,\ldots,\Ya_T\}$ are independent from one another after conditioning on $X$.
-%
-% introduce \thetaa here (augemented theta) %
-%
-We can define the emission distribution $f$ to explicitly model the probability of observing a label $L_t$ conditioned on the hidden state $X_t$ and the observation $Z_t$. First, we decompose the HMM parameters for hidden state $i$ as $\theta^{(i)} := \{\theta^{(i)}_{Z},\theta_{L}^{(i)}\}$. Then, we denote the probability density of $Z_t$ at $z_t$ given $X_t = i$ as $f_{z}^{(i)}(z_t ~;~ \theta_{z}^{(i)})$, and we denote the probability mass of $L_t$ at $\ell_t$ given $X_t = i$ and $Z_t = z_t$ as $f_{\ell}^{(i)}(\ell_t \mid z_t ~;~ \theta^{(i)}_{\ell})$. The full density of $Y_t$ given $X_t = i$ is thus
-%
-\begin{gather}
-    f^{(i)}(y_t ~;~ \theta^{(i)}) = f_{z}^{(i)}(z_t ~;~ \theta_{z}^{(i)}) ~ f_{\ell}^{(i)}(\ell_t \mid z_t ~;~ \theta^{(i)}_{\ell})
-    \label{eqn:PHMM_emis}
-\end{gather}
-%
-We refer to this model as a \textit{partially hidden Markov model}, or PHMM. The PHMM is a specific instance of an HMM, so its likelihood is identical to a standard HMM.
-
-\subsection{Types of PHMMs}
-
-\subsubsection{Fixed labels}
-
-Previous studies \citep{McClintock:2018,Li:2021} incorporate labels into HMMs using an approach that is equivalent to a specific instance of the PHMM. In particular, define some non-random set of observation times as $\calT$. Then, the studies above implicitly use a time-varying probability mass for $L_t$ which we denote as $f_{\ell,t}^{(i)}(\ell_t)$, where
-%
-\begin{gather}
-    f_{\ell,t}^{(i)}(\ell_t) = \begin{cases} 1, & t \in \calT, \enspace \ell_t = i, \\ 
-    %
-    1, & t \notin \calT, \enspace \ell_t = \emptyset, \\ 
-    %
-    0, & \text{otherwise}. \end{cases} \label{eqn:PHMM_emis_niave}
-\end{gather}
-%
-In words, these studies assume that the probability of observing a label is either $1$ or $0$, and these probabilities are predefined by some known set $\calT$.
-
-\subsubsection{Random labels}
-
-However, in many situations the act of observing a label itself may be a random event that depends upon either the observation $Z_t$ or the hidden state $X_t$. As an example to motivate the inclusion of random labels, consider an HMM used to model the behaviour of a predator. Assume that there are two behavioural states (resting and hunting), where $X_t = 1$ corresponds to resting and $X_t = 2$ corresponds to hunting. Further, suppose that researchers can observe successful prey captures via a crunching sound that is registered on an acoustic recorder when the animal is hunting. Given that the predator is hunting, denote the probability of observing a crunching sound on the acoustic recorder as $p$. Labels are never observed when the animal is resting ($X_t = 1$), so $f^{(1)}(\ell_t = \emptyset \mid z_t) = 1$ for all observations $z_t$. However, a label is observed with probability $p$ if the animal is hunting ($X_t = 2$), so $f^{(2)}(\ell_t = 2 \mid z_t) = p$ and $f^{(2)}(\ell_t = \emptyset \mid z_t) = 1-p$. In this way, the existence of a label itself may provide information that can be included within a PHMM to improve parameter estimates.
-
-In addition, it is reasonable to assume that the predator may be more likely to catch its prey when it is running faster, so $f^{(2)}(\ell_t = 2 \mid z_t)$ may be modelled as an increasing function of $z_t$. %(say, $f^{(2)}(\ell_t = \emptyset \mid z_t) = 1-\text{expit}(z_t)$). 
-In this way, the probability of observing a label depends upon both the hidden behavioural state $X_t$ and the underlying observation $Z_t$.
-
-Further, suppose that, while an animal is resting, it bumps into a rock with a sound identical to a crunch of prey with probability $q$. In this case, there is a nonzero probability of mislabelling a resting state as foraging, so $f^{(1)}(\ell_t = 2 \mid z_t) = q$ and $f^{(1)}(\ell_t = \emptyset \mid z_t) = 1-q$.
-
-In the theorem below, we show that the parameter estimates themselves do not change if the probability of observing a label depends \textit{only} on the observation $z_t$ and not the underlying state $X_t$.
-
-\begin{theorem}
-
-    The maximum likelihood estimate and observed fisher information for both models are equal.
-
-\end{theorem}
-
-I argue that this formulation may miss important information if the probability of observing a label is a function of $X_t$ and/or $Y_t$. By explicitly modelling the probability of getting a label from an observation, we treat the presence or absence of a label itself as important information that can be used to model animal movement more accurately.
-
-\subsubsection{weighted labels}
-
-One issue with semi-supervised learning in general occurs when the model used for inference is misspecified data is sparsely labelled. In this case, the likelihood can be dominated by the unlabelled data so that the labelled data will not meaningfully affect maximum likelihood estimates \citep{Chapelle:2006,Ren:2020}. One solution described by \citet{Chapelle:2006} is to use a weighted likelihood that gives separate weight to the labelled and unlabelled data sets. Suppose that there are a total of $n$ labelled observations and $m$ unlabelled observations. Then, the weighted log-density of $\Ya_t$ proposed by \citet{Chapelle:2006} is:
-
 \begin{equation}
-    \log\left(\fa^{(i)}(\ya_t)\right) = \left(\frac{m+n}{m}(1-\ell_t)(1-\lambda) + \frac{m+n}{n}\ell_t\lambda\right)  \log\left(f^{(i)}(y_t)\right) + \log \left(f^{(i)}(x_t \ell_t|y_t)\right)
-    \label{eqn:w_like}
+    p(\bfy,\bfz ~;~ \bfdelta, \bfGamma, \bftheta,\bfbeta) = \bfdelta P(y_1,z_1;\bftheta,\bfbeta) \prod_{t=2}^T \bfGamma P(y_t,z_t;\bftheta,\bfbeta) \mathbf{1}^\top_N, \label{eqn:PHMM_like}
 \end{equation}
+%
+where $P_t(y_t,z_t;\bftheta,\bfbeta)$ is an $N \times N$ diagonal matrix with entry $(i,i)$ equal to $f^{(i)}(y_t; \theta^{(i)}) g^{(i)}(z_t; \beta^{(i)})$. I refer to this model as a \textit{partially hidden Markov model}, or PHMM.
 
-where $\lambda \in [0,1]$ represents the relative weight given to labelled observations. Setting $\lambda = 0$ throws out all labelled data, setting $\lambda = 1$ throws out all unlabelled data, and setting $\lambda = n/(n+m)$ returns the standard density of from Equation (\ref{eqn:PHMM_emis}). \citet{Chapelle:2006} mention that $\lambda$ can be tuned via cross validation, but cross validation is ``bound to fail if $n$ is very small". The authors then suggest to set $\lambda = 1$ (i.e. only consider labelled observations), and then slowly decrease $\lambda$ until the likelihood surface exhibits significant multi-modality. I will experiment with both cross-validation as well as the method described by \citet{Chapelle:2006} to tune $\lambda$.
+Incorporating partial labels in an HMM to define a PHMM is relatively straightforward, but defining a weighted likelihood for PHMMs is more complicated. Recall that each term in Equation (\ref{eqn:like_partial_lambda}) is a scalar value raised to the power of some weight. However, each term in Equation (\ref{eqn:PHMM_like}) is a matrix, so it is not straightforward to raise each term to the power of a (possibly fractional) weight. While it is possible to calculate fractional powers of matrices, doing so can be computationally expensive and the result can be difficult to interpret \citep{Higham:2011}. 
+
+An alternative weighted likelihood for PHMMs should have three desired properties. First, the weighted likelihood should reduce to Equation (\ref{eqn:PHMM_like}) for some ``natural" weight, just as $\lambda = (T-|\calT|)/T$ does for the weighted likelihood in Equation (\ref{eqn:like_partial_lambda}). Second, some weight should correspond to ignoring all unlabelled data, just as $\lambda = 0$ does for the weighted likelihood in Equation (\ref{eqn:like_partial_lambda}). These two properties allow practitioners to intuitively select a weight that balances a natural weighting scheme with one that completely ignores all unlabelled data. Finally, the weighted likelihood should be relatively simple and intuitive compared to the standard likelihood from Equation (\ref{eqn:PHMM_like}). I thus propose the weighting parameter $\alpha \in [0,1]$ and the following weighted likelihood for partially hidden Markov models:
+%
+\begin{gather}
+    w_\alpha(z_t) = \begin{cases}
+        1,        & z_t \in \{1,\ldots,N\} \\
+        \alpha,   & z_t = \emptyset
+    \end{cases}, \\
+    %
+    p_\alpha(\bfy,\bfz ~;~ \bfdelta, \bfGamma, \bftheta,\bfbeta) = \bfdelta P(y_1,z_1;\bftheta,\bfbeta)^{w_\alpha(z_1)} \prod_{t=2}^T \bfGamma P(y_t,z_t;\bftheta,\bfbeta)^{w_\alpha(z_t)} \mathbf{1}^\top_N,
+    \label{eqn:PHMM_like_alpha}
+\end{gather} 
+%
+This formulation satisfies the three desired properties listed above. First, if $\alpha = 0$, then the term corresponding to an unlabelled observation $t$ is $\bfGamma P(y_t,z_t;\bftheta,\bfbeta)^{0} = \bfGamma$. Therefore, the likelihood of a PHMM with $\alpha = 0$ is identical to the likelihood of an HMM that treats all unlabelled observations as totally missing \citep{Zucchini:2016}. Next, if $\alpha = 1$, then the term corresponding to an unlabelled observation $t$ is $\bfGamma P(y_t,z_t;\bftheta,\bfbeta)^{1} = \bfGamma P(y_t,z_t;\bftheta,\bfbeta)$. In this case, the weighted PHMM likelihood in Equation (\ref{eqn:PHMM_like_alpha}) is equivalent to the standard PHMM likelihood in Equation (\ref{eqn:PHMM_like}). While it is technically possible, I do not recommend considering $\alpha > 1$ because doing so weights unlabelled observations more heavily than labelled observations. Finally, I argue that this formulation is intuitive, as it weights unlabelled observations using some power of $\alpha$ and leaves labelled observations unaltered. Figure \ref{fig:PHMM} shows graphical representations of PHMMs for several values of $\alpha$ with only $Z_1$, $Z_{t-1}$, and $Z_{t+1}$ observed.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width = 6in]{plt/PHMM_alpha_one.png}
+        \caption{Partially hidden Markov model with $\alpha = 1$. This PHMM gives equal weight to all observations in the likelihood function. This is the ``natural" formulation of a PHMM with missing labels.}
+    \end{subfigure}%
+    \\
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width = 6in]{plt/PHMM_alpha_half.png}
+        \caption{Partially hidden Markov model with $\alpha \in (0,1)$. This PHMM weights the influence of $Y_t$, $Y_T$, and all other observations that do not have associated observed labels. However, it does not ignore them altogether.}
+    \end{subfigure}%
+    \\
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width = 6in]{plt/PHMM_alpha_zero.png}
+        \caption{Partially hidden Markov model with $\alpha = 0$. This PHMM ignores all observations that do not have associated label information. In particular, $Y_t$, $Y_T$, and all other observations that do not have observed labels are treated as unobserved.}
+    \end{subfigure}%
+    \caption{Graphical representation of various PHMMs with likelihood weightings (a) $\alpha = 1$, (b) $\alpha \in (0,1)$ and (c) $\alpha = 0$. The colour (white, light grey, and dark grey) indicates how much a given observation affects the weighted likelihood. White corresponds to treating the random variable as unobserved, dark grey corresponds to treating the variable as fully observed, and light grey corresponds to treating the random variable as observed, but weighting it in the likelihood. The latent states $\{X_{t'}\}_{t'=1}^{T}$, observations $\{Y_{t'}\}_{t'=1}^{T}$, and labels $\{Z_{t'}\}_{t'=1}^{T}$ are as described in Section \ref{sec:model}. %$X_t$ corresponds to an unobserved latent state at time $t$ whose distribution is described by a Markov chain. $Y_t$ corresponds to an observation at time $t$, where $Y_t$ given all other observations $\bfY \setminus \{Y_t\}$, hidden states $\bfX$, and labels $\bfZ$ depends only on $X_t$. Similarly, $Z_t$ corresponds to the label at time $t$, where $Z_t$ given all observations $\bfY$, hidden states $\bfX$, and other labels $\bfZ \setminus \{Z_t\}$ depends only on $X_t$. 
+    In this example, $Z_1$, $Z_{t-1}$, and $Z_{t+1}$ are observed, while all other labels are unobserved (i.e., $Z_{t'} = \emptyset$ for $t' \neq 1,t-1,t+1$).}
+    \label{fig:PHMM}
+\end{figure}
+
+I recommend that practitioners employ the following cross-validation procedure to find an optimal value of $\alpha$. First, select a range of candidate values of $\alpha \in [0,1]$. I in particular recommend testing at least $\alpha \in \{0,|\calT| / (T - |\calT|), 1\}$, as $\alpha = |\calT| / (T - |\calT|)$ approximately balances the influence of labelled and unlabelled observations in the likelihood. Second, divide the time series data set into several ``folds" for cross validation. Third, train the PHMM on the full data set while ignoring a fold, and use the forward-backward algorithm on the held-out fold (ignoring its associated labels) to estimate the hidden state probabilities $\bbP(X_t \mid \bfY = \bfy)$. Fourth, repeat the previous step for all folds to estimate the cross-validated hidden states probabilities for the entire data set. Finally, use the estimated probabilities and true labels together with standard model validation techniques to evaluate the resulting PHMM and select the most appropriate value of $\alpha$. %To solidify this idea and show the performance of the method, I used this process to conduct two case studies that are presented in the next section.
