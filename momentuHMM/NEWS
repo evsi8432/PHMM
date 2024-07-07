@@ -1,0 +1,354 @@
+momentuHMM 1.5.5 2022-10-18
+-----------------
+CHANGES
+
+* raster package moved to Imports as it is no longer imported by crawl>=2.3.0
+
+
+momentuHMM 1.5.4 2021-09-02
+-----------------
+NEW FEATURES
+
+* CIreal argument 'm' will now accept a 'miHMM' object
+
+CHANGES
+
+* removed implicit conversions in C++ code that triggered compilation warnings on macOS with -Wconversion -Wno-sign-conversion in CPPFLAGS
+
+BUG FIXES
+
+* when using the normal random walk data stream distributions ("rw_norm", "rw_mvnorm2", or "rw_mvnorm3") in fitHMM (and MIfitHMM), any additional data streams were erroneously offset by one time step during model fitting; previous analyses using a normal random walk data stream in addition to any other data stream(s) should be re-run
+
+* CIreal produced an error when the 'm' argument was a 'miSum' object
+
+
+momentuHMM 1.5.3 2021-07-06
+-----------------
+NEW FEATURES
+
+* 'return' argument added to plotStationary function for returning stationary probabilities, standards errors, and confidence intervals as a list
+
+* progress bar added when using doFuture parallel backend
+
+CHANGES
+
+* doFuture is now the default parallel backend; to run functions with ncores>1, the doFuture and future packages must be installed
+
+* data stream names can no longer be 'beta', 'delta', 'pi', 'g0', or 'theta'
+
+* data stream names can no longer begin with 'beta', 'delta', 'g0', or 'theta'
+
+* added additional checks for unused arguments passed down from a calling function (e.g. fitHMM, prepData); these were previously ignored
+
+* added additional checks for undefined data stream or parameter names in common list arguments (e.g. DM, workBounds, userBounds); these were previously ignored
+
+* the following packages have been moved to 'Suggests' and are now used conditionally: car, data.tree, extraDistr, geosphere, mitools, nleqslv, prodlim, qdapRegex, and survival. If any of these are packages needed, users will be prompted to install.
+
+BUG FIXES
+
+* In fitHMM and MIfitHMM, an error is now triggered if a covariate (e.g. 'cov1') used in formula, formulaDelta, formulaPi, or DM is missing from the data and a variable with the same name (e.g. 'cov1') exists in the (global) environment. In momentuHMM <=1.5.2, internal calls to stats::model.matrix(formula, data) with missing covariates in the data would attempt to use the (global) environment variable with no warning or error, which could be problematic.
+
+
+momentuHMM 1.5.2 2021-01-06
+-----------------
+NEW FEATURES
+
+* Approximate individual-level random effects estimation for the state transition probabilities based on Burnham & White (2002) can now be implemented via the randomEffects function
+
+* ncores argument added to simData and simHierData for simulating individual tracks in parallel
+
+CHANGES
+
+* Viterbi algorithm for discrete random effect models (with mixtures>1) now uses individual mixture probabilities instead of overall mixture probabilities
+
+* plotPR now uses car::qqPlot for pseudo-residual qq-plots
+
+* the following packages have been moved to 'Suggests' and are now used conditionally: BB, conicfit, dplyr, expm, ggmap, ggplot2, lubridate, magrittr, matrixcalc, moveHMM, raster, and scatterplot3d. If any of these are packages needed, users will be prompted to install.
+
+* suppress 'Unknown or uninitialised column' warning in crawlWrap when obsData is an sf object
+
+* removed initial SANN optimization when using retryFits in crawlWrap
+
+* reduced worker memory pressure when running crawlWrap or MIfitHMM in parallel
+
+* deprecated cons and workcons arguments are now defunct; please use workBounds instead
+
+* deprecated verbose argument in fitHMM and MIfitHMM is now defunct; please use nlmPar instead
+
+BUG FIXES
+
+* mixtureProbs function did not properly account for individual covariates in DM argument when mixtures>1; hence estimated mixture and state probabilities were incorrect for discrete random effect models in momentuHMM <= 1.5.1 if individual covariates were included on any data stream distribution parameters
+
+* mixtureProbs function produced an error when initial distribution formula includes covariates
+
+* avoid numerical underflow in mixtureProbs when a mixture probability is zero
+
+* crawlWrap now internally deals with a long-standing bug in crawl::crwPredict when predTime argument includes prediction times before the first observation
+
+* overly restrictive check for time-varying covariates in fitHMM when stationary=TRUE
+
+
+momentuHMM 1.5.1 2020-03-04
+-----------------
+CHANGES
+
+* stationary argument in fitHMM and MIfitHMM can now be set to TRUE when there are no time-varying covariates included in formula; in this case the initial distribution is calculated independently for each individual
+
+* in prepData, data streams can now be named 'step' and/or 'angle' when coordNames=NULL
+
+BUG FIXES
+
+* fitHMM and MIfitHMM argument 'retryFits' failed to randomly perturb parameter values in momentuHMM 1.5.0
+
+* 'toState' special formula did not account for non-default values in 'betaRef' argument
+
+
+momentuHMM 1.5.0 2019-12-17
+-----------------
+NEW FEATURES
+
+* hierarchical HMMs can now be fitted and simulated using the fitHMM, MIfitHMM, and simHierData functions
+
+* discrete individual-level random effects now available on state transition probabilities via the 'mixtures' and 'formulaPi' arguments in fitHMM, MIfitHMM, simData, and simHierData
+
+* discrete-time version of Hooten et al (2019; <doi:10.1111/ele.13198>) recharge model has been added
+
+* 'mvnorm2' (bivariate normal) and 'mvnorm3' (trivariate normal) data stream distributions have been added
+
+* 'rw_norm' (normal random walk), 'rw_mvnorm2' (bivariate normal random walk), and 'rw_mvnorm3' (trivariate normal random walk) data stream distributions have been added
+
+* 'cat' (categorical), 'logis' (logistic), 'negbinom' (negative binomial), and 't' (non-central t) data stream distributions have been added
+
+* circularAngleMean can now alternatively be used to specify the reference angle (i.e. directional persistence) coefficient in circular-circular regression models
+
+* added getTrProbs and mixtureProbs functions for calculating transition and mixture probabilities, respectively
+
+* added na.rm argument to MIpool and MIfitHMM for excluding model fits with NA estimates or standard errors from pooling
+
+BUG FIXES
+
+* crawlMerge did not properly sort the merged crwData object when time steps were missing in data
+
+* simData now properly extracts z values from raster stacks when nbAnimals > 1
+
+
+momentuHMM 1.4.3 2018-11-21
+-----------------
+NEW FEATURES
+
+* betaCons argument added to fitHMM and MIfitHMM for specifying equality constraints on transition probability matrix parameters
+
+* betaRef argument added to fitHMM and MIfitHMM for specifying the reference states for t.p.m. multinomial logit link
+
+* retryParallel argument added to crawlWrap
+
+CHANGES
+
+* updated for compatibility with crawl (>= 2.2.1); notable changes include removal of the initial.state argument and addition of the time.scale argument in crawlWrap.
+
+* changed how fixPar and betaCons are handled when optimizing the likelihood; this should make optimization faster and more stable when these parameter constraints are used
+
+* formulaDelta=NULL now default in fitHMM, MIfitHMM, and simData
+
+* %dorng% now used instead of %dopar%, thereby allowing for reproducible foreach loops when using parallel processing
+
+* cleaned up crawlWrap printing when retryFits>0 and retryParallel=FALSE
+
+* retrySD argument in fitHMM and MIfitHMM can now be a scalar
+
+* bug fix in calculation of standard errors (and confidence intervals) for transition probability and initial distribution parameters when workBounds$beta or workBounds$delta are specified other than the default (-Inf,Inf)
+
+* bug fix in calculation of number of parameters in getAIC when formulaDelta=NULL and initial distribution is fixed using fixPar$delta
+
+* bug fix in MIpool when estimated standard errors are not finite for some imputations
+
+
+momentuHMM 1.4.2 2018-06-19
+-----------------
+NEW FEATURES
+
+* Northern fulmar example of Pirotta et al (2018) added to vignette
+
+* retrySD argument added to crawlWrap for additional flexibility when exploring the likelihood surface using retryFits
+
+* shape argument added to plotSat and plotSpatialCov functions
+
+* projargs argument added to plotSat function (for handling projected data coordinates)
+
+* stateNames argument added to plotSpatialCov function
+
+* data argument of plotSat function can now be a data frame, momentuHMMData, momentuHMM, miHMM, or miSum object
+
+* data argument of plotSpatialCov function can now be a data frame, momentuHMMData, momentuHMM, miHMM, or miSum object
+
+CHANGES
+
+* 'angleStrength' special function name changed to 'angleFormula'
+
+* strength argument in 'angleFormula' special function is now optional
+
+* when theta and/or fixPar arguments are missing in crawlWrap, crawl::crwMLE default values are now used
+
+* bug fix in crawlWrap when retryFits>0 and control argument is NULL. This bug caused additional model fitting attempts to fail
+
+* modified B-spline examples in fitHMM and simData to accommodate bug fixes in splines2 (>= 0.2.8)
+
+
+momentuHMM 1.4.1 2018-05-21
+-----------------
+NEW FEATURES
+
+* special function 'toState' can now be used in formula argument for modelling transitions to specific states
+
+* timeInStates function added for calculating activity budgets
+
+* modelName argument added to fitHMM and MIfitHMM
+
+* added setModelName and setStateNames functions
+
+* added stationary and plotStationary functions for calculating and visualizing stationary state probabilities as a function of covariates
+
+* plotStationary argument added to plot.momentuHMM, plot.miHMM, and plot.miSum
+
+* added summary.momentuHMMData function
+
+CHANGES
+
+* bug fix when a pseudo-design matrix formula includes interactions with >1 factor variable
+
+* check and print package version upon loading
+
+* unit tests no longer included in CRAN build because they were taking too long
+
+* updated citation info
+
+
+momentuHMM 1.4.0 2018-02-27
+-----------------
+NEW FEATURES
+
+* von Mises consensus distribution of Rivest et al. (2016) can now be specified for angular data streams
+
+* angleStrength function can now be used in circular-circular regression models. This allows each angular covariate (e.g. wind direction) to be weighted by an additional positive real covariate (e.g. wind speed) as in Rivest et al. (2016).
+
+* checkPar0 function added to aid users with initial parameter (e.g. Par0, beta0, delta0) specification
+
+* centroids argument added to MIfitHMM
+
+* useInitial argument added to MIfitHMM for using parameter estimates of first model fit as initial values for all subsequent model fits
+
+* retrySD argument added to fitHMM and MIfitHMM for specifying standard deviation of random normal perturbations when using retryFits
+
+* alternative optimization methods (``Nelder-Mead'' and ``SANN'') can now be specified in fitHMM and MIfitHMM using the optMethod and control arguments
+
+* prior argument added to fitHMM and MIfitHMM for specifying prior distributions on working parameters
+
+* AICweights function added for calculating AIC weights across a set of candidate models
+
+* sample size (n) argument added to AIC.momentuHMM for calculating small sample corrected AIC (i.e. AICc)
+
+* crawlPlot argument added to plot.crwData as a wrapper for crawl::crwPredictPlot
+
+* various graphical parameters added to plot.momentuHMM for plot customization
+
+CHANGES
+
+* For multiple imputation analyses, pseudoRes (and plotPR) can now calculate (and plot) pseudo-residuals individually for each model fit
+
+* cons and workcons arguments are now deprecated; please use workBounds instead
+
+* verbose argument in fitHMM and MIfitHMM is now deprecated; please use nlmPar instead
+
+
+momentuHMM 1.3.0 2017-12-06
+-----------------
+NEW FEATURES
+
+* Dynamic activity centers (i.e., those with coordinates that can change over time) can now be handled via the centroids argument in prepData and simData. An example based on the group dynamic model of Langrock et al. (2014) has been added to the vignette.
+
+* initialPosition argument in simData can now be specified as a list indicating the initial position for each individual
+
+CHANGES
+
+* multinomial logit link now used on zeroInflation and oneInflation parameters
+
+* bug fix in calculation of pseudo-residuals (pseudoRes) with zeroInflation and/or oneInflation
+
+* bug fix in CIreal when natural scale delta estimates are near boundary
+
+* bug fix in crawlWrap when predTime is of length one
+
+* bug fix in MIpool when initial distribution includes covariates
+
+* splines and splines2 package dependencies changed to Suggests in DESCRIPTION file
+
+
+momentuHMM 1.2.0 2017-10-19
+-----------------
+NEW FEATURES
+
+* Regression formulas can now be specified for the initial distributions of HMMs using the formulaDelta argument in fitHMM, MIfitHMM, and simData. These changes are backwards compatible with previous versions, but note that the number and order of arguments has been changed in fitHMM, MIfitHMM, and simData.
+
+CHANGES
+
+* If step length is zero at time t or t+1, simData and prepData now return NA for turning angle at time step t 
+
+* bug fix in pseudoRes such that pseudo-residuals now "reset" for each individual
+
+* bug fix in fitHMM when using fixPar to fix initial distribution (delta)
+
+* bug fix in fitHMM when nbStates=1 and circularAngleMean=TRUE
+
+* bug fix in fitHMM when nbStates=1 and retryFits>0
+
+
+momentuHMM 1.1.1 2017-09-19
+-----------------
+NEW FEATURES
+
+* Normal (Gaussian) and Bernoulli distributions can now be specified for data streams
+
+* Harbour seal example of McClintock et al (2013) added to vignette
+
+CHANGES
+
+* added pseudoRes continuity adjustment for discrete distributions
+
+
+momentuHMM 1.1.0 2017-08-15
+-----------------
+NEW FEATURES
+
+* fixPar argument in fitHMM and MIfitHMM now specified on the same scale as the initial parameters (Par0, beta0, and delta0 arguments)
+
+* Factor-level covariates (e.g. 'sexM', `sexF') can now be included in pseudo design matrix DM arguments of fitHMM, MIfitHMM, and simData
+
+* obsPerAnimal argument in simData can now be specified as a list indicating the number of observations for each individual
+
+CHANGES
+
+* vignette now built using knitr
+
+* bug fix in crawlWrap when predTimes argument includes times that are before the time of first observation
+
+* bug fix in plot.miSum calculation of natural scale parameters when cons and/or workcons MIfitHMM arguments are used
+
+
+momentuHMM 1.0.1 2017-07-17
+-----------------
+NEW FEATURES
+
+* Elephant seal example of Michelot et al (2017) added to vignette
+
+CHANGES
+
+* turning angles for lat/long coordinates (type='LL') now calculated based on initial bearings using geosphere::bearing in turnAngle
+
+* bug fix when calculating activity center distances from lat/long coordinates (type='LL') in distAngle
+
+* bug fix in prepData when successive pairs of coordinates are NA
+
+
+momentuHMM 1.0.0 2017-06-16
+-----------------
+* Initial CRAN posting

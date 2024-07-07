@@ -1,3 +1,3 @@
 # PHMM
 
-This repository contains code and references related to partially-observed hidden Markov models with applications to detecting foraging events of southern resident killer whales
+This repository contains code and references related to the manuscript "THE PARTIALLY HIDDEN MARKOV MODEL: INCORPORATING SPARSE LABELS IN BIOLOGGING STUDIES WITH WEIGHTED LIKELIHOODS". It has applications to detecting foraging behaviour of northern and southern resident killer whales off the coast of British Columbia, Canada.

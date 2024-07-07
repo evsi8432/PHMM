@@ -1,4 +1,5 @@
 ### plot results ###
+options(scipen=999)
 
 labs <- c(Elevation = "Depth (m)",
           maxDepth = "Maximum Depth (m)",
@@ -70,8 +71,7 @@ plot_dives <- function(dives,df){
       geom_hline(yintercept = 0) +
       geom_vline(aes(xintercept = stime),
                  data = dive_df %>% dplyr::filter(true_label == 4)) +
-      labs(title = TeX(paste("$\\alpha =", lambda, "$, ",
-                             "$P(X_{s,T_s} \\in \\{4,6\\} \\ | \\ Y_s) =", title1, "$")),
+      labs(title = TeX(paste0("$\\alpha = ", lambda, "$")),
            color="", y="",
            x="Time (min)") +
       scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
@@ -110,8 +110,11 @@ plot_dives <- function(dives,df){
 #plot_dives(setdiff(dives,c(pos_dives,neg_dives)),"NA")
 #plot_dives(neg_dives,"neg")
 #plot_dives(pos_dives,"pos")
-#plot_dives(test_dives,Data_less_fine_unlabelled)
-plot_dives(unique(Data_less_fine_unlabelled$ID),Data_less_fine_unlabelled)
+if(K == 1){
+  plot_dives(unique(Data_less_fine_unlabelled$ID),Data_less_fine_unlabelled)
+} else {
+  plot_dives(test_dives,Data_less_fine_unlabelled)
+}
 
 labs <- c(htv = "Heading Total Variation (rad/s, log)",
           jp_normed = "Jerk Peak (normalized, log)",
@@ -137,15 +140,14 @@ colors <- c("1" = colors[1],
             "2" = colors[2],
             "3" = colors[3],
             "4" = colors[4],
-            "5" = colors[5],
-            "6" = colors[6])
+            "5" = colors[5])
 
 if(K == 1){
   
   # make dataframe of densities
   for(feature in c("delt_d","htv","jp_normed")){
-    features <- c(features,rep(feature,6*npoints))
-    for (state in 1:6){
+    features <- c(features,rep(feature,5*npoints))
+    for (state in 1:5){
       states <- c(states,rep(state,npoints))
       
       xs0 <- seq(xlims[[feature]][1],
@@ -167,6 +169,14 @@ if(K == 1){
     }
   }
 
+  if(lambda == 1.0){
+    legend.pos <- "right"
+    wid <- 8
+  } else {
+    legend.pos <- "none"
+    wid <- 6
+  }
+  
   df_to_plot <- data.frame(x = xs,
                            feature = features,
                            state = factor(states),
@@ -185,18 +195,18 @@ if(K == 1){
     labs(title = TeX(paste("$\\alpha =", lambda, "$")),
          color="", y="Density",
          x="") +
-    scale_color_manual(limits = c("1","2","3","4","5","6"),
+    scale_color_manual(limits = c("1","2","3","4","5"),
                        labels = c("1" = "descent",
                                   "2" = "bottom",
                                   "3" = "chase",
                                   "4" = "capture",
-                                  "5" = "ascent w/o fish",
-                                  "6" = "ascent w/ fish"),
+                                  "5" = "ascent"),
                        values = colors) +
     theme_classic() +
     theme(strip.background = element_blank(),
           strip.placement = "outside",
           text = element_text(size=16),
+          legend.position = legend.pos,
           plot.title = element_text(hjust = 0.5)) +
     facet_wrap(~feature,ncol = 1,labeller = as_labeller(labs), scales = "free")
   
@@ -205,7 +215,7 @@ if(K == 1){
                 round(log10(lambda),3),"_",
                 K,".png"), 
          plot0, 
-         width = 8, height = 6)
+         width = wid, height = 6)
   
   states <- c("desc","bot","chase","capt",
               "asc w/o", "asc w/")
