@@ -1,63 +1,53 @@
 \newpage
 
-- put Tennessen definitions of a dive here
-- add figure with AUC for all alphas for case study 1 here.
+\section{Appendix: Results for all values of $\alpha$ in Case Study 1}
 
-\section{Appendix: details for case study 1}
+This appendix recreates Figures \ref{fig:sens_spec} and \ref{fig:viterbi_dives_D26b} from the first case study for $\alpha = 0,0.025,0.049,0.525,1$. The results for $\alpha = 0.025$ and $\alpha = 0.525$ are very similar to those for $\alpha = 0.049$, but I include them here for completeness.
 
-%Given dive $t$ was type $i \in \{1,2,3\}$, we assumed that $Y_{s,t}$ followed a two-dimensional normal distribution with mean $\bfmu^{(i)}$ and covariance matrix $\bfSigma^{(i)}$ for all $s$ and $t$. Again, the parameters $\{\bfmu^{(i)},\bfSigma^{(i)}\}$ are shared between whales.
-
-\section{Appendix: details for case study 2}
-
-
-\section{Appendix: Additional Dive Profiles of Killer Whale Foraging}
-
-The following pages contain additional plots of killer whale dive profiles. Figure \ref{fig:profiles_5566} is of a dive that is confirmed to have no foraging and figure \ref{fig:profiles_4281} is of a dive that is confirmed to contain a prey capture.
-
-\begin{figure}
+\begin{figure}[H]
     \centering
-    \begin{subfigure}[t]{0.45\textwidth}
-        \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-4_4_neg_5566.png}
-        \caption{Decoded dives for PHMM with $\alpha = 0.0001$ (down-weighting unlabelled observations).}
-    \end{subfigure}
-    ~
-    \begin{subfigure}[t]{0.45\textwidth}
-        \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-2_4_neg_5566.png}
-        \caption{Decoded dive for PHMM with $\alpha = 0.01$ (down-weighting unlabelled observations).}
-    \end{subfigure}
-    \\
-    \begin{subfigure}[t]{0.45\textwidth}
-        \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_0_4_neg_5566.png}
-        \caption{Decoded dives for PHMM with $\alpha = 1$ (the ``natural" weighting).}
-    \end{subfigure}
-    \caption{Dive profiles, observations, and the decoded probability that each window is the ``catch" state for a selected dive that is confirmed to have no foraging and PHMMs with $\alpha \in \{0.0001,0.01,1\}$. Observations are coloured according to the most-likely sequence of hidden states as determined by the Viterbi algorithm. The window associated with the true prey capture label is denoted by a vertical black line. The estimated probability that the entire dive is a successful foraging dive is shown in the title of each subfigure.}
-    \label{fig:profiles_5566}
+    \includegraphics[width=4in]{plt/1-1-1-logMDDD_all_model_comparison_all_alphas.png}
+    \caption{Sensitivity, specificity, and AUC values associated with each dive type. True values are determined via the drone-detected dive types. The PHMMs for each value of $\alpha$ were fit using the entire dataset with a selected sub-profile held out. Then, the dives for that sub-profile were estimated by using the forward-backward algorithm on the sub-profile with the drone-detected labels removed. I repeated this process for every sub-profile to get a full set of estimated dive types.}
+    \label{fig:sens_spec_app}
 \end{figure}
 
-
-
-\begin{figure}
+\begin{figure}[H]
     \centering
     \begin{subfigure}[t]{0.45\textwidth}
         \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-4_4_pos_4281.png}
-        \caption{Decoded dives for PHMM with $\alpha = 0.0001$ (down-weighting unlabelled observations).}
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-1.png}
+        \caption{Decoded dives for PHMM with $\alpha = 1.000$ (the ``natural" weighting).}
     \end{subfigure}
-    ~
+    ~ 
     \begin{subfigure}[t]{0.45\textwidth}
         \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_-2_4_pos_4281.png}
-        \caption{Decoded dive for PHMM with $\alpha = 0.01$ (down-weighting unlabelled observations).}
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.5245.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.525$.}
     \end{subfigure}
     \\
     \begin{subfigure}[t]{0.45\textwidth}
         \centering
-        \includegraphics[width = 2.75in]{plt/profile_delt_d_htv_jp_normed_0_4_pos_4281.png}
-        \caption{Decoded dives for PHMM with $\alpha = 1$ (the ``natural" weighting).}
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.049.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.049$.}
     \end{subfigure}
-    \caption{Dive profiles, observations, and the decoded probability that each window is the ``catch" state for a selected successful foraging dive and PHMMs with $\alpha \in \{0.0001,0.01,1\}$. Observations are coloured according to the most-likely sequence of hidden states as determined by the Viterbi algorithm. The window associated with the true prey capture label is denoted by a vertical black line. The estimated probability that the entire dive is a successful foraging dive is shown in the title of each subfigure.}
-    \label{fig:profiles_4281}
+    ~
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.0245.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.025$.}
+    \end{subfigure}
+    \\
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.png}
+        \caption{Decoded dives for PHMM with $\alpha = 0.000$ (treating the unlabelled observations as missing).}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[t]{0.45\textwidth}
+        \centering
+        \includegraphics[width = 3in]{plt/D26b-profile-D26b-known_states.png}
+        \caption{Dive profile with true drone-detected labels.}
+    \end{subfigure}
+    \caption{Viterbi-decoded dives for a given sub-profile and several different PHMMs. Each PHMM was fit to the dataset with the sub-profile held out. Then the Viterbi algorithm was used on the held-out dataset with its labels removed in order to test the predictive performance of each PHMM.}
+    \label{fig:viterbi_dives_D26b_app}
 \end{figure}
