@@ -1,98 +1,28 @@
-\documentclass{article}
-\pdfoutput=1
+\chapter{Incorporating Sparse Labels using Weighted Likelihoods}
 
-\input{header}
-\input{defs}
-
-\usepackage{appendix}
-\usepackage{blkarray}
-
-\title{The Partially Hidden Markov Model: Incorporating Sparse Labels in Biologging Studies with Weighted Likelihoods}
-
-\author{
-  \textbf{Evan Sidrow} \\
-  Department of Statistics \\
-  University of British Columbia\\
-  Vancouver, Canada \\
-  \texttt{evan.sidrow@stat.ubc.ca} \\
-  %
-  \and
-  %
-  \textbf{Nancy Heckman} \\
-  Department of Statistics \\
-  University of British Columbia \\
-  Vancouver, Canada \\
-  %
-  \and
-  %
-  \textbf{Sarah M. E. Fortune} \\
-  Department of Oceanography \\
-  Dalhousie University \\
-  Halifax, Canada \\
-  %
-  \and
-  %
-  \textbf{Andrew W. Trites} \\
-  Department of Zoology \\
-  Institute for the Oceans and Fisheries \\
-  University of British Columbia \\
-  Vancouver, Canada \\
-  %
-  \and
-  %
-  \textbf{Marie Auger-M\'eth\'e} \\
-  Department of Statistics \\
-  Institute for the Oceans and Fisheries \\
-  University of British Columbia \\
-  Vancouver, Canada \\
-}
-
-\begin{document}
-
-\maketitle
+This chapter is written as a manuscript to be submitted in an academic journal. Computer code associated with the chapter can be found at \texttt{https://github.com/evsi8432/PHMM}.
 
 \section{Introduction}
-\label{sec:intro}
-\input sections/intro.tex
+\label{sec:chp3_intro}
+\input body_chapters/chap_3/sections/intro.tex
 
 \section{Background}
-\label{sec:background}
-\input sections/background.tex
+\label{sec:chp3_background}
+\input body_chapters/chap_3/sections/background.tex
 
 \section{Weighted Likelihood for Semi-Supervised Learning in Hidden Markov Models}
-\label{sec:model}
-\input sections/model.tex
+\label{sec:chp3_mod}
+\input body_chapters/chap_3/sections/model.tex
 
 %\section{Simulation Study}
 %\label{sec:sim}
 %\input sections/sim_study.tex
 
 \section{Case Studies}
-\label{sec:case}
-\input sections/case_study_1.tex
-\input sections/case_study_2.tex
+\label{sec:chp3_case}
+\input body_chapters/chap_3/sections/case_study_1.tex
+\input body_chapters/chap_3/sections/case_study_2.tex
 
 \section{Discussion}
-\label{sec:discussion}
-\input sections/discussion.tex
-
-\section*{ACKNOWLEDGEMENTS}
-The killer whale data were collected under University of British Columbia Animal Care Permit number A19-0053 and Fisheries and Oceans Canada Marine Mammal Scientific License for Whale Research number XMMS 6 2019.
-This research was enabled in part by support provided by WestGrid (www.westgrid.ca) and Compute Canada (www.computecanada.ca).
-We acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC) as well as the support of Fisheries and Oceans Canada (DFO). 
-We thank the University of British Columbia and the Four-Year Doctoral Fellowship program.
-We acknowledge the Canadian Statistical Sciences Institute (CANSSI) for its support.
-We appreciate the support of the Canada Research Chairs program.
-We acknowledge support from the BC Knowledge Development Fund.
-We thank Canada Foundation for Innovation for its support.
-\newpage
-\bibliography{references}
-%
-
-\begin{appendix}
-
-\input sections/appendix.tex
-
-\end{appendix}
-
-\end{document}
+\label{sec:chp3_discussion}
+\input body_chapters/chap_3/sections/discussion.tex

@@ -6,7 +6,7 @@ library(ggplot2)
 library(latex2exp)
 library(pROC)
 
-#setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
+setwd("/Users/evsi8432/Documents/Research/PHMM/src/bash")
 
 # get command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
@@ -145,7 +145,7 @@ for(model in models){
   df <- rbind(df,df_model)
 }
 
-plot0 <- ggplot(df[df$model %in% c("0","0.049","1"),],
+plot0 <- ggplot(df,#[df$model %in% c("0","0.049","1"),],
                 aes(x=behaviour,
                     y=value,
                     fill=model)) +

@@ -15,7 +15,7 @@ The hidden Markov chain was a sequence of dive types and the observations were s
 
 \subsubsection{Data Processing}
 
-I defined a dive as any period in which the killer whale was below a depth of 0.5 meters for at least 30 seconds, which includes only biologically meaningful dives and excludes surface behaviours. In line with previous studies \citep{Barajas:2017, McRae:2024}, I summarized each dive with its maximum depth and total duration.  Formally, the observation associated with whale $s$ and dive $t$ was denoted as $y_{s,t} = (m_{s,t},d_{s,t})$, where $m_{s,t}$ corresponds to maximum depth in meters and $d_{s,t}$ corresponds to dive duration in seconds. This processes resulted in a time series of $S=11$ killer whales, who together performed a total of $T=2169$ dives.
+I defined a dive as any period in which the killer whale was below a depth of 0.5 meters for at least 30 seconds, which includes only biologically meaningful dives and excludes surface behaviours. In line with previous studies \citep{Barajas:2017, McRae:2024}, I summarized each dive with its maximum depth and total duration.  Formally, the observation associated with whale $s$ and dive $t$ was denoted as $y_{s,t} = (m_{s,t},d_{s,t})$, where $m_{s,t}$ corresponds to maximum depth in meters and $d_{s,t}$ corresponds to dive duration in seconds. This process resulted in time series for $S=11$ killer whales, who together performed a total of $T=2169$ dives.
 
 Using drone videos, a subject matter expert visually identified three diving behaviours: resting, travelling, and foraging \citep[classification criteria are given in Table 2 of][]{McRae:2024}. Formally, the label associated with whale $s$ and dive $t$ was denoted as $z_{s,t} \in \{\emptyset,1,2,3\}$, where each value of $z_{s,t}$ corresponds to either no label (if $z_{s,t} = \emptyset$), resting (if $z_{s,t} = 1$), travelling (if $z_{s,t} = 2$), or foraging (if $z_{s,t} = 3$). This resulted in a total of $|\calT| = 106$ labels for dive types. 
 
@@ -23,28 +23,28 @@ Using drone videos, a subject matter expert visually identified three diving beh
 
 I used a PHMM with $N = 3$ dive types to match the drone-identified labels of resting, travelling, and foraging dives. For whale $s$ and dive $t$, I denoted the hidden dive type as $X_{s,t} \in \{1,2,3\}$. 
 %
-Histograms and scatter plots revealed that dive duration and maximum depth looked to be distributed approximately as mixtures of log-normal distributions, and the two features were also highly correlated. Therefore, I set the joint, state-dependent distribution of the observations to be a bi-variate log-normal distribution. 
+Histograms and scatter plots revealed that dive duration and maximum depth looked to be distributed approximately as mixtures of log-normal distributions, and the two features were also highly correlated. Therefore, I set the joint, state-dependent distribution of the observations to be a bivariate log-normal distribution. 
 
-Recall that I used thresholds of $m_{s,t} \geq 0.5$ and $d_{s,t} \geq 30$ to define biologically relevant dives. However, I modelled these observations using a two-dimensional log-normal distribution whose sample space is $\bbR_{>0}^2$, so my model is misspecified. I could use a truncated multivariate log-normal distribution instead, but many HMM software packages do not incorporate truncated log-normal distributions by default \citep{McClintock:2018,Visser:2010}, and several ecological studies make this modelling choice as well \citep{Barajas:2017, Quick:2017, Tennessen:2019b}. I therefore use a non-truncated log-normal distribution for simplicity and repeatability. %add something about the final model is still good.
+Recall that I used thresholds of $m_{s,t} \geq 0.5$ and $d_{s,t} \geq 30$ to define biologically relevant dives. However, I modelled these observations using a two-dimensional log-normal distribution whose sample space is $\bbR_{>0}^2$, so my model is misspecified. I could use a truncated multivariate log-normal distribution instead, but many HMM software packages do not incorporate truncated log-normal distributions by default \citep{McClintock:2018,Visser:2010}, and several ecological studies make this modelling choice as well \citep{Barajas:2017, Quick:2017, Tennessen:2019b}. I therefore use a non-truncated log-normal distribution for simplicity and reproducibility. %add something about the final model is still good.
 
-Again, I model the killer whale dive profiles as independent from one another, but with shared parameters. Denote the observations from whale $s$ as $\bfy_s = \{y_{s,t}\}_{t=1}^{T_s}$ and the labels from whale $s$ as $\bfz_s = \{z_{s,t}\}_{t=1}^{T_s}$, where $T_s$ is the number of dives associated with whale $s$. Then, the total likelihood for the model with weight $\alpha$ and parameters $\bfdelta, \bfGamma, \bftheta$ and $\bfbeta$ is $\prod_{s=1}^{11} p_\alpha (\bfy_s,\bfz_s ~;~ \bfdelta, \bfGamma, \bftheta, \bfbeta)$, where $p_\alpha$ is defined in Equation (\ref{eqn:PHMM_like_alpha}).
+Again, I model the killer whale dive profiles as independent from one another, but with shared parameters. Denote the observations from whale $s$ as $\bfy_s = \{y_{s,t}\}_{t=1}^{T_s}$ and the labels from whale $s$ as $\bfz_s = \{z_{s,t}\}_{t=1}^{T_s}$, where $T_s$ is the number of dives associated with whale $s$. Then, the total likelihood for the model with weight $\alpha$ and parameters $\bfdelta, \bfGamma, \bftheta$ and $\bfbeta$ is $\prod_{s=1}^{11} \calL_\alpha (\bfy_s,\bfz_s ~;~ \bfdelta, \bfGamma, \bftheta, \bfbeta)$, where $\calL_\alpha$ is defined in Equation (\ref{eqn:PHMM_like_alpha}).
 
 \subsubsection{Model Selection and Evaluation}
 
 I fit five different candidate PHMMs corresponding to five different values of $\alpha$. In line with the cross-validation procedure from Section 3, I tested $\alpha = 0$, which ignores all unlabelled data; $\alpha = 1$, which gives equal weight to all observations; and $\alpha = |\calT| / (T - |\calT|) = 0.049$, which approximately balances the contribution of labelled and unlabelled observations. For completeness, I also tested $\alpha = 0.025$, which averages $\alpha = 0$ and $\alpha = 0.049$; and $\alpha = 0.525$, which averages $\alpha = 0.049$ and $\alpha = 1$.
 
-I randomly divided each killer whale dive profile into two ``sub-profiles" of contiguous dives such that both sub-profiles had an equal number of labels. The resulting 22 sub-profiles were used as folds in a cross-validation scheme to estimate the probability of each dive's type conditioned on the observations (i.e., $\bbP(X_{s,t} = i \mid \bfY_s = \bfy_s)$ for $s = 1,\ldots,11$; $t = 1,\ldots,T_s$; and $i = 1,2,3$). I then calculated the sensitivity, specificity, and area under the receiver operating characteristic curve (AUC) associated with identifying each dive type. Sensitivity is the proportion of dives that were observed to be a certain type that were correctly identified as that type (i.e. the true positive rate). Specificity is the proportion of dives that were observed to not be of a certain type that were correctly identified as not that type (i.e. the true negative rate). AUC balances sensitivity and specificity and usually takes values between 0 and 1, where higher is better \citep{Bradley:1997}. I also ran the Viterbi algorithm on each fold within the cross validation procedure and plotted the resulting dive profiles as a visual model evaluation tool \citep{Viterbi:1967}.
+I randomly divided each killer whale dive profile into two ``sub-profiles" of contiguous dives such that both sub-profiles had an equal number of labels. The resulting 22 sub-profiles were used as folds in a cross-validation scheme to estimate the probability of each dive's type conditioned on the observations (i.e., $\bbP(X_{s,t} = i \mid \bfY_s = \bfy_s)$ for $s = 1,\ldots,11$; $t = 1,\ldots,T_s$; and $i = 1,2,3$). I then calculated the sensitivity, specificity, and area under the receiver operating characteristic curve (AUC) associated with identifying each dive type. Sensitivity is the proportion of dives that were observed to be a certain type that were correctly identified as that type (i.e. the true positive rate). Specificity is the proportion of dives that were observed to not be of a certain type that were correctly identified as not that type (i.e. the true negative rate). AUC balances sensitivity and specificity and takes values between 0 and 1, where higher is better \citep{Bradley:1997}. I also ran the Viterbi algorithm on each fold within the cross validation procedure and plotted the resulting dive profiles as a visual model evaluation tool \citep{Viterbi:1967}.
 
 %A total of eight profiles had labelled dives, and I divided each into two sub-profiles to make a total of 16 sub-profiles. I randomly divided each killer whale's dive profile in two such that there were an equal number of labels on both sub-profiles. For each value of $\alpha$, I fit the PHMM 16 times, leaving out one of the sub-profiles for each of the 16 analyses. For each fold, I used 10 random parameter initializations and fit the PHMM models on Compute Canada Cedar nodes with 8GB of RAM. The 10 parameter initializations did not depend upon the value of $\alpha$. Fitting was done in $\texttt{R}$ using the momentuHMM package for model formulation and the nlm package for optimization \citep{McClintock:2018,R:2023}. I then selected the PHMM with the maximum likelihood of the 10 random parameter initializations. Next, I removed the labels on the held-out sub-profiles and used the corresponding PHMM fits to predict dive types. I predicted the dive types using the forward-backward algorithm \citep{Zucchini:2016}. This procedure gave us estimated probabilities of each dive type for all labelled dives across the 16 held-out sub-profiles. 
 
 \subsubsection{Results}
 
-The PHMMs with $\alpha \in (0,1)$ tended to obtain better results for cross-validated sensitivity, specificity, and AUC, demonstrating the effectiveness of my weighted likelihood approach (Figure \ref{fig:sens_spec}). Compared to the PHMMs with $\alpha = 0$ and $\alpha = 1$, the PHMM with $\alpha = 0.049$ had the best sensitivity for foraging dives and travelling dives, and it had the second-best sensitivity for resting dives. It had the best specificity for resting dives and travelling dives, and its specificity for foraging dives was comparable to the other models. In addition, the PHMM with $\alpha = 0.049$ had an AUC for resting that was comparable or better than the other PHMMs (0.866), but it had the best AUC for foraging (0.955) and the best AUC for travelling (0.926). Results for the PHMMs with $\alpha = 0.025$ and $\alpha = 0.525$ are similar to the PHMM with $\alpha = 0.049$ (see Appendix). 
+The PHMMs with $\alpha \in (0,1)$ tended to obtain better results for cross-validated sensitivity, specificity, and AUC, demonstrating the effectiveness of my weighted likelihood approach (Figure \ref{fig:sens_spec}). Compared to the PHMMs with $\alpha = 0$ and $\alpha = 1$, the PHMM with $\alpha = 0.049$ had the best sensitivity for foraging dives and travelling dives, and it had the second-best sensitivity for resting dives. It had the best specificity for resting dives and travelling dives, and its specificity for foraging dives was comparable to the other models. In addition, the PHMM with $\alpha = 0.049$ had an AUC for resting that was comparable or better than the other PHMMs (0.866), but it had the best AUC for foraging (0.955) and the best AUC for travelling (0.926). Results for the PHMMs with $\alpha = 0.025$ and $\alpha = 0.525$ are similar to the PHMM with $\alpha = 0.049$ (see Appendix B). 
 
 \begin{figure}
     \centering
-    \includegraphics[width=4in]{plt/1-1-1-logMDDD_all_model_comparison.png}
-    \caption{Sensitivity, specificity, and AUC values associated with each dive type. True values are determined via the drone-detected dive types. The PHMMs for each value of $\alpha$ were fit using the entire dataset with a selected sub-profile held out. Then, the dives for that sub-profile were estimated by using the forward-backward algorithm on the sub-profile with the drone-detected labels removed. I repeated this process for every sub-profile to get a full set of estimated dive types. Results for PHMMs with $\alpha = 0.025$ and $\alpha = 0.525$ are in the Appendix.}
+    \includegraphics[width=4in]{body_chapters/chap_3/plt/1-1-1-logMDDD_all_model_comparison.png}
+    \caption[Sensitivity, specificity, and AUC values from case study 1 associated with each dive type for PHMMs with different values of $\alpha$.]{Sensitivity, specificity, and AUC values associated with each dive type. True values are determined via the drone-detected dive types. The PHMMs for each value of $\alpha$ were fit using the entire dataset with a selected sub-profile held out. Then, the dives for that sub-profile were estimated by using the forward-backward algorithm on the sub-profile with the drone-detected labels removed. I repeated this process for every sub-profile to get a full set of estimated dive types. Results for PHMMs with $\alpha = 0.025$ and $\alpha = 0.525$ are in Appendix B.}
     \label{fig:sens_spec}
 \end{figure}
 
@@ -56,30 +56,30 @@ The PHMMs with $\alpha \in (0,1)$ were also more biologically interpretable comp
 
 \begin{figure}
     \centering
-    \begin{subfigure}[t]{0.45\textwidth}
+    \begin{subfigure}[t]{0.475\textwidth}
         \centering
-        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-1.png}
+        \includegraphics[width = 2.75in]{body_chapters/chap_3/plt/D26b-profile-D26b-fixed-1.png}
         \caption{Decoded dives for PHMM with $\alpha = 1.000$ (the ``natural" weighting).}
     \end{subfigure}%
     ~ 
-    \begin{subfigure}[t]{0.45\textwidth}
+    \begin{subfigure}[t]{0.475\textwidth}
         \centering
-        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.049.png}
+        \includegraphics[width = 2.75in]{body_chapters/chap_3/plt/D26b-profile-D26b-fixed-0.049.png}
         \caption{Decoded dives for PHMM with $\alpha = 0.049$.}
     \end{subfigure}
     \\
-    \begin{subfigure}[t]{0.45\textwidth}
+    \begin{subfigure}[t]{0.475\textwidth}
         \centering
-        \includegraphics[width = 3in]{plt/D26b-profile-D26b-fixed-0.png}
+        \includegraphics[width = 2.75in]{body_chapters/chap_3/plt/D26b-profile-D26b-fixed-0.png}
         \caption{Decoded dives for PHMM with $\alpha = 0.000$ (treating the unlabelled observations as missing).}
     \end{subfigure}
     ~
-    \begin{subfigure}[t]{0.45\textwidth}
+    \begin{subfigure}[t]{0.475\textwidth}
         \centering
-        \includegraphics[width = 3in]{plt/D26b-profile-D26b-known_states.png}
+        \includegraphics[width = 2.75in]{body_chapters/chap_3/plt/D26b-profile-D26b-known_states.png}
         \caption{Dive profile with true drone-detected labels.}
     \end{subfigure}
-    \caption{Viterbi-decoded dives for a given sub-profile and several different PHMMs. Each PHMM was fit to the dataset with the sub-profile held out. Then the Viterbi algorithm was used on the held-out dataset with its labels removed in order to test the predictive performance of each PHMM.}
+    \caption[Viterbi-decoded dives for a given sub-profile and several different PHMMs from the first case study.]{Viterbi-decoded dives for a given sub-profile and several different PHMMs. Each PHMM was fit to the dataset with the sub-profile held out. Then the Viterbi algorithm was used on the held-out dataset with its labels removed in order to test the predictive performance of each PHMM.}
     \label{fig:viterbi_dives_D26b}
 \end{figure}
 
