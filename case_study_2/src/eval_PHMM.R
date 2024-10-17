@@ -1,27 +1,26 @@
-Data_fine_unlabelled <- prepData(Data_fine[Data_fine$divenum %in% test_dives,
-                                      c("ID","divenum","stime","ad",names(dist))],
-                            coordNames=NULL)
+df_unlabelled <- prepData(df[,c("ID","divenum","stime","ad",names(dist),"knownState")],
+                          coordNames=NULL)
 
-Data_fine_unlabelled$true_label <- Data_fine_unlabelled$knownState
-Data_fine_unlabelled$knownState <- 7
+df_unlabelled$true_label <- df_unlabelled$knownState
+df_unlabelled$knownState <- 7
 
 Par0 <- getPar0(hmm)
 
-hmm0 <- fitHMM(data=Data_fine_unlabelled,
+hmm0 <- fitHMM(data=df_unlabelled,
                nbStates=N,
                dist=hmm$conditions$dist,
-               fixPar=list(knownState = hmm$conditions$fixPar$knownState),
                DM=hmm$conditions$DM,
                beta0=Par0$beta,
                delta0=(1-eps)*(Par0$delta)+eps*rep(1/N,N),
                Par0=Par0$Par,
+               stateNames = hmm$stateNames,
                nlmPar = list('stepmax'=1e-100,
                              'iterlim'=1))
 
-Data_fine_unlabelled$viterbi <- viterbi(hmm0)
-Data_fine_unlabelled$p_catch <- stateProbs(hmm0)[,4]
-Data_fine_unlabelled$p_no_fish <- stateProbs(hmm0)[,5]
-Data_fine_unlabelled$p_fish <- stateProbs(hmm0)[,6]
+df_unlabelled$viterbi <- viterbi(hmm0)
+df_unlabelled$p_catch <- stateProbs(hmm0)[,4]
+df_unlabelled$p_no_fish <- stateProbs(hmm0)[,5]
+df_unlabelled$p_fish <- stateProbs(hmm0)[,6]
 
 probs <- c()
 labs <- c()
@@ -40,7 +39,8 @@ for(divenum in test_dives){
     labs <- c(labs,FALSE)
   }
   
-  p_fish <- tail(Data_fine_unlabelled$p_fish[Data_fine_unlabelled$ID == divenum],1)
+  p_fish <- tail(df_unlabelled$p_fish[df_unlabelled$ID == divenum],1)
+  p_fish <- p_fish + tail(df_unlabelled$p_catch[df_unlabelled$ID == divenum],1)
   print(p_fish)
   
   probs <- c(probs,p_fish)
@@ -49,4 +49,5 @@ for(divenum in test_dives){
   
 }
 
-AUCs_PHMM[k] <- roc(response = labs, predictor=probs)$auc
+probs_PHMM[[k]] <- probs
+AUCs_PHMM[k] <- roc(response = labs, predictor=probs, direction = "<")$auc

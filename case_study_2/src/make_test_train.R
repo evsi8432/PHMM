@@ -1,3 +1,8 @@
+dives <- unique(df$ID)
+
+pos_dives <- df$ID[df$knownState %in% 6]
+neg_dives <- df$ID[df$knownState %in% 5]
+
 rand_pos <- sample(pos_dives)
 rand_neg <- sample(neg_dives)
 

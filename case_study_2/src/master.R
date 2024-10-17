@@ -24,9 +24,6 @@ setwd(directory)
 
 # set options
 
-plot <- T # whether to plot results
-load_raw <- F # whether to load raw Data from scratch
-
 args = commandArgs(trailingOnly=TRUE)
  
 K <- as.numeric(args[1]) # number of cross-validations (one means just do all the data)
@@ -42,27 +39,10 @@ dir.create(paste0(directory,"/plt"), showWarnings = FALSE)
 set.seed(1)
 
 # load in data
-if(load_raw){
-  print("loading fine scale data...")
-  source("src/load_data_fine.R") # load in Data_fine
-} else {
-  Data_fine <- data.frame(fread("../../dat/Final_Data_fine1.csv"))
-}
-
-# load in coarse data
-print("loading coarse scale data...")
-source("src/load_data_coarse.R") # load in Data
-
-print("labeling dives and prey captures...")
-source("src/label_data.R") # label dives, foraging events
-
-# plot data before fitting model
-if(plot & load_raw){
-  print("plotting data with labels...")
-  source("src/EDA.R")
-}
+df <- data.frame(fread("dat/case_study_2_data.csv"))
 
 # create cross-validation groups
+print("seperating train and test set...")
 source("src/make_test_train.R")
 
 # initialize model lists
@@ -98,7 +78,7 @@ for(k in 1:K){
   max_ll <- -Inf
   for(rand_seed in 1:num_seeds){
     print(paste("working on fold",k,"of",K,"and seed",rand_seed,"of",num_seeds))
-    source("src/fit_PHMM_coarser.R")
+    source("src/fit_PHMM.R")
     if(-hmm$mod$minimum > max_ll){
       best_hmm <- hmm
       max_ll <- -hmm$mod$minimum
@@ -110,13 +90,11 @@ for(k in 1:K){
 
   # evaluate PHMM
   print("evaluating PHMM...")
-  source("src/eval_PHMM_coarser.R")
+  source("src/eval_PHMM.R")
   
   # plot hmm results
-  if(plot){
-    print("plotting PHMM...")
-    source("src/plot_PHMM_coarser.R")
-  }
+  print("plotting PHMM...")
+  source("src/plot_PHMM.R")
 }
 
 # summarize cross-validation results

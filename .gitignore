@@ -5,9 +5,12 @@ params/
 ref/
 archive/
 src/archive/
+doc/
+
 *.ipynb
 *.RData*
 
+*.docx
 *.png
 *.rds
 *.pdf
