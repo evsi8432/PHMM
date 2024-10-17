@@ -1,6 +1,6 @@
 plots/
 plt/
-dat/
+/dat/
 params/
 ref/
 archive/
@@ -14,7 +14,6 @@ doc/
 *.png
 *.rds
 *.pdf
-*.csv
 
 momentuHMM/.Rproj.user
 momentuHMM/.Rhistory
@@ -23,3 +22,5 @@ momentuHMM/.Ruserdata
 momentuHMM/src/*.o
 momentuHMM/src/*.so
 momentuHMM/src/*.dll
+momentuHMM/manuscript/*.csv
+momentuHMM/vignettes/*.csv
